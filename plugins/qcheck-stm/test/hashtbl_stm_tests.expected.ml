@@ -30,13 +30,20 @@ let rec remove_first x xs_1 =
                    pos_cnum = 2502
                  }
              }))
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = (char, int) t
+                             let init =
+                               Some (fun () -> create ~random:false 16)
+                           end)
 module Spec =
   struct
     open STM
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = (char, int) t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Clear 
       | Reset 
@@ -100,7 +107,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = create ~random:false 16
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -271,17 +277,66 @@ module Spec =
     let postcond _ _ _ = true
     let run cmd__010_ sut__011_ =
       match cmd__010_ with
-      | Clear -> Res (unit, (clear sut__011_))
-      | Reset -> Res (unit, (reset sut__011_))
-      | Add (a_2, b_2) -> Res (unit, (add sut__011_ a_2 b_2))
+      | Clear ->
+          Res
+            (unit,
+              (let tmp__012_ = SUT.pop sut__011_ in
+               let res__013_ = clear tmp__012_ in
+               (SUT.push tmp__012_ sut__011_; res__013_)))
+      | Reset ->
+          Res
+            (unit,
+              (let tmp__014_ = SUT.pop sut__011_ in
+               let res__015_ = reset tmp__014_ in
+               (SUT.push tmp__014_ sut__011_; res__015_)))
+      | Add (a_2, b_2) ->
+          Res
+            (unit,
+              (let tmp__016_ = SUT.pop sut__011_ in
+               let res__017_ = add tmp__016_ a_2 b_2 in
+               (SUT.push tmp__016_ sut__011_; res__017_)))
       | Find a_3 ->
-          Res ((result int exn), (protect (fun () -> find sut__011_ a_3) ()))
-      | Find_opt a_4 -> Res ((option int), (find_opt sut__011_ a_4))
-      | Find_all a_5 -> Res ((list int), (find_all sut__011_ a_5))
-      | Mem a_6 -> Res (bool, (mem sut__011_ a_6))
-      | Remove a_7 -> Res (unit, (remove sut__011_ a_7))
-      | Replace (a_8, b_3) -> Res (unit, (replace sut__011_ a_8 b_3))
-      | Length -> Res (int, (length sut__011_))
+          Res
+            ((result int exn),
+              (let tmp__018_ = SUT.pop sut__011_ in
+               let res__019_ = protect (fun () -> find tmp__018_ a_3) () in
+               (SUT.push tmp__018_ sut__011_; res__019_)))
+      | Find_opt a_4 ->
+          Res
+            ((option int),
+              (let tmp__020_ = SUT.pop sut__011_ in
+               let res__021_ = find_opt tmp__020_ a_4 in
+               (SUT.push tmp__020_ sut__011_; res__021_)))
+      | Find_all a_5 ->
+          Res
+            ((list int),
+              (let tmp__022_ = SUT.pop sut__011_ in
+               let res__023_ = find_all tmp__022_ a_5 in
+               (SUT.push tmp__022_ sut__011_; res__023_)))
+      | Mem a_6 ->
+          Res
+            (bool,
+              (let tmp__024_ = SUT.pop sut__011_ in
+               let res__025_ = mem tmp__024_ a_6 in
+               (SUT.push tmp__024_ sut__011_; res__025_)))
+      | Remove a_7 ->
+          Res
+            (unit,
+              (let tmp__026_ = SUT.pop sut__011_ in
+               let res__027_ = remove tmp__026_ a_7 in
+               (SUT.push tmp__026_ sut__011_; res__027_)))
+      | Replace (a_8, b_3) ->
+          Res
+            (unit,
+              (let tmp__028_ = SUT.pop sut__011_ in
+               let res__029_ = replace tmp__028_ a_8 b_3 in
+               (SUT.push tmp__028_ sut__011_; res__029_)))
+      | Length ->
+          Res
+            (int,
+              (let tmp__030_ = SUT.pop sut__011_ in
+               let res__031_ = length tmp__030_ in
+               (SUT.push tmp__030_ sut__011_; res__031_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()

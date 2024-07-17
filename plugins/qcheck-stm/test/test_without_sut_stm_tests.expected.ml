@@ -3,6 +3,11 @@
 [@@@ocaml.warning "-26-27-69-32"]
 open Test_without_sut
 module Ortac_runtime = Ortac_runtime_qcheck_stm
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = int t
+                             let init = Some (fun () -> make 16 0)
+                           end)
 module Spec =
   struct
     open STM
@@ -15,7 +20,8 @@ module Spec =
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = int t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Add of int * int 
     let show_cmd cmd__001_ =
@@ -55,7 +61,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = make 16 0
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -69,7 +74,8 @@ module Spec =
       match cmd__008_ with | Add (a_1, b) -> true
     let postcond _ _ _ = true
     let run cmd__010_ sut__011_ =
-      match cmd__010_ with | Add (a_1, b) -> Res (int, (add a_1 b))
+      match cmd__010_ with
+      | Add (a_1, b) -> Res (int, (let res__012_ = add a_1 b in res__012_))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()

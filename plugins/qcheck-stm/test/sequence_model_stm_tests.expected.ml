@@ -26,13 +26,19 @@ let length_opt s =
                    pos_cnum = 760
                  }
              }))
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = char t
+                             let init = Some (fun () -> create ())
+                           end)
 module Spec =
   struct
     open STM
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = char t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Add of char 
       | Remove 
@@ -71,7 +77,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = create ()
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -184,9 +189,24 @@ module Spec =
     let postcond _ _ _ = true
     let run cmd__012_ sut__013_ =
       match cmd__012_ with
-      | Add v -> Res (unit, (add v sut__013_))
-      | Remove -> Res ((option char), (remove sut__013_))
-      | Remove_ -> Res ((option char), (remove_ sut__013_))
+      | Add v ->
+          Res
+            (unit,
+              (let tmp__014_ = SUT.pop sut__013_ in
+               let res__015_ = add v tmp__014_ in
+               (SUT.push tmp__014_ sut__013_; res__015_)))
+      | Remove ->
+          Res
+            ((option char),
+              (let tmp__016_ = SUT.pop sut__013_ in
+               let res__017_ = remove tmp__016_ in
+               (SUT.push tmp__016_ sut__013_; res__017_)))
+      | Remove_ ->
+          Res
+            ((option char),
+              (let tmp__018_ = SUT.pop sut__013_ in
+               let res__019_ = remove_ tmp__018_ in
+               (SUT.push tmp__018_ sut__013_; res__019_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()

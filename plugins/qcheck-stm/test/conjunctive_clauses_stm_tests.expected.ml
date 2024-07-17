@@ -28,13 +28,19 @@ let set_contents c i a_1 =
                    pos_cnum = 619
                  }
              }))
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = char t
+                             let init = Some (fun () -> make 42 'a')
+                           end)
 module Spec =
   struct
     open STM
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = char t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Set of int * char 
     let show_cmd cmd__001_ =
@@ -74,7 +80,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = make 42 'a'
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -156,7 +161,9 @@ module Spec =
       | Set (i_1, a_2) ->
           Res
             ((result unit exn),
-              (protect (fun () -> set sut__015_ i_1 a_2) ()))
+              (let tmp__016_ = SUT.pop sut__015_ in
+               let res__017_ = protect (fun () -> set tmp__016_ i_1 a_2) () in
+               (SUT.push tmp__016_ sut__015_; res__017_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()

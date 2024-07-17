@@ -3,13 +3,19 @@
 [@@@ocaml.warning "-26-27-69-32"]
 open Invariants
 module Ortac_runtime = Ortac_runtime_qcheck_stm
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = int t
+                             let init = Some (fun () -> create 42)
+                           end)
 module Spec =
   struct
     open STM
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = int t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Push of int 
     let show_cmd cmd__001_ =
@@ -45,7 +51,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = create 42
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -83,16 +88,22 @@ module Spec =
       match cmd__008_ with | Push a_1 -> true
     let postcond _ _ _ = true
     let run cmd__010_ sut__011_ =
-      match cmd__010_ with | Push a_1 -> Res (unit, (push a_1 sut__011_))
+      match cmd__010_ with
+      | Push a_1 ->
+          Res
+            (unit,
+              (let tmp__012_ = SUT.pop sut__011_ in
+               let res__013_ = push a_1 tmp__012_ in
+               (SUT.push tmp__012_ sut__011_; res__013_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () =
-  let __state__012_ = Spec.init_state in
+  let __state__014_ = Spec.init_state in
   if
     not
       (try
          Ortac_runtime.Gospelstdlib.(>)
-           (Ortac_runtime.Gospelstdlib.List.length __state__012_.contents)
+           (Ortac_runtime.Gospelstdlib.List.length __state__014_.contents)
            (Ortac_runtime.Gospelstdlib.integer_of_int 0)
        with
        | e ->

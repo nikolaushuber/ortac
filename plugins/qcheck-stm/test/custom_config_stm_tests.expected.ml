@@ -3,6 +3,11 @@
 [@@@ocaml.warning "-26-27-69-32"]
 open Custom_config
 module Ortac_runtime = Ortac_runtime_qcheck_stm
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = int t
+                             let init = Some (fun () -> empty ())
+                           end)
 module Spec =
   struct
     open STM
@@ -33,7 +38,8 @@ module Spec =
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = int t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Proj of char elt 
       | Push of int elt 
@@ -76,7 +82,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = empty ()
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -126,11 +131,19 @@ module Spec =
     let postcond _ _ _ = true
     let run cmd__010_ sut__011_ =
       match cmd__010_ with
-      | Proj __arg0 -> Res (char, (proj __arg0))
-      | Push e -> Res (unit, (push sut__011_ e))
+      | Proj __arg0 -> Res (char, (let res__012_ = proj __arg0 in res__012_))
+      | Push e ->
+          Res
+            (unit,
+              (let tmp__013_ = SUT.pop sut__011_ in
+               let res__014_ = push tmp__013_ e in
+               (SUT.push tmp__013_ sut__011_; res__014_)))
       | Top ->
           Res
-            ((result (elt int) exn), (protect (fun () -> top sut__011_) ()))
+            ((result (elt int) exn),
+              (let tmp__015_ = SUT.pop sut__011_ in
+               let res__016_ = protect (fun () -> top tmp__015_) () in
+               (SUT.push tmp__015_ sut__011_; res__016_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()

@@ -3,6 +3,11 @@
 [@@@ocaml.warning "-26-27-69-32"]
 open Lwt_dllist_spec
 module Ortac_runtime = Ortac_runtime_qcheck_stm
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = int t
+                             let init = Some (fun () -> create ())
+                           end)
 module Spec =
   struct
     open STM
@@ -14,7 +19,8 @@ module Spec =
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = int t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Is_empty 
       | Length 
@@ -65,7 +71,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = create ()
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -295,16 +300,54 @@ module Spec =
     let postcond _ _ _ = true
     let run cmd__015_ sut__016_ =
       match cmd__015_ with
-      | Is_empty -> Res (bool, (is_empty sut__016_))
-      | Length -> Res (int, (length sut__016_))
-      | Add_l a_1 -> Res ((node int), (add_l a_1 sut__016_))
-      | Add_r a_2 -> Res ((node int), (add_r a_2 sut__016_))
+      | Is_empty ->
+          Res
+            (bool,
+              (let tmp__017_ = SUT.pop sut__016_ in
+               let res__018_ = is_empty tmp__017_ in
+               (SUT.push tmp__017_ sut__016_; res__018_)))
+      | Length ->
+          Res
+            (int,
+              (let tmp__019_ = SUT.pop sut__016_ in
+               let res__020_ = length tmp__019_ in
+               (SUT.push tmp__019_ sut__016_; res__020_)))
+      | Add_l a_1 ->
+          Res
+            ((node int),
+              (let tmp__021_ = SUT.pop sut__016_ in
+               let res__022_ = add_l a_1 tmp__021_ in
+               (SUT.push tmp__021_ sut__016_; res__022_)))
+      | Add_r a_2 ->
+          Res
+            ((node int),
+              (let tmp__023_ = SUT.pop sut__016_ in
+               let res__024_ = add_r a_2 tmp__023_ in
+               (SUT.push tmp__023_ sut__016_; res__024_)))
       | Take_l ->
-          Res ((result int exn), (protect (fun () -> take_l sut__016_) ()))
+          Res
+            ((result int exn),
+              (let tmp__025_ = SUT.pop sut__016_ in
+               let res__026_ = protect (fun () -> take_l tmp__025_) () in
+               (SUT.push tmp__025_ sut__016_; res__026_)))
       | Take_r ->
-          Res ((result int exn), (protect (fun () -> take_r sut__016_) ()))
-      | Take_opt_l -> Res ((option int), (take_opt_l sut__016_))
-      | Take_opt_r -> Res ((option int), (take_opt_r sut__016_))
+          Res
+            ((result int exn),
+              (let tmp__027_ = SUT.pop sut__016_ in
+               let res__028_ = protect (fun () -> take_r tmp__027_) () in
+               (SUT.push tmp__027_ sut__016_; res__028_)))
+      | Take_opt_l ->
+          Res
+            ((option int),
+              (let tmp__029_ = SUT.pop sut__016_ in
+               let res__030_ = take_opt_l tmp__029_ in
+               (SUT.push tmp__029_ sut__016_; res__030_)))
+      | Take_opt_r ->
+          Res
+            ((option int),
+              (let tmp__031_ = SUT.pop sut__016_ in
+               let res__032_ = take_opt_r tmp__031_ in
+               (SUT.push tmp__031_ sut__016_; res__032_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()

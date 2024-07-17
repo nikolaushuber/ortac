@@ -311,7 +311,7 @@ $ grep -A 3 "let run" foo.ml
     let run cmd__010_ sut__011_ =
       match cmd__010_ with
       | Type_not_supported x ->
-          Res (new_type, (type_not_supported x sut__011_))
+          Res
 ]}
 
 You can open the [foo.ml] file to edit it in this way.

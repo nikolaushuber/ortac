@@ -26,6 +26,33 @@ type _ ty += Dummy : _ ty
 let dummy = (Dummy, fun _ -> Printf.sprintf "unknown value")
 let is_dummy = function Res ((Dummy, _), _) -> true | _ -> false
 
+module SUT = struct
+  module Make (M : sig
+    type sut
+
+    val init : (unit -> sut) option
+  end) =
+  struct
+    type elt = M.sut
+    type t = elt Stack.t
+
+    let init_sut = M.init
+
+    let create () =
+      let stack = Stack.create () in
+      match init_sut with
+      | Some f ->
+          Stack.push (f ()) stack;
+          stack
+      | None -> stack
+
+    let clear : t -> unit = Stack.clear
+    let size : t -> int = Stack.length
+    let pop : t -> elt = Stack.pop
+    let push : elt -> t -> unit = Stack.push
+  end
+end
+
 module Make (Spec : Spec) = struct
   open QCheck
   module Internal = Internal.Make (Spec) [@alert "-internal"]

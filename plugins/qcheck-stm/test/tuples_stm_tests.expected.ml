@@ -3,6 +3,11 @@
 [@@@ocaml.warning "-26-27-69-32"]
 open Tuples
 module Ortac_runtime = Ortac_runtime_qcheck_stm
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = (char, int) t
+                             let init = Some (fun () -> create ())
+                           end)
 module Spec =
   struct
     open STM
@@ -26,7 +31,8 @@ module Spec =
         (Util.Pp.to_show
            (Util.Pp.pp_tuple3 (Util.Pp.of_show show1) (Util.Pp.of_show show2)
               (Util.Pp.of_show show3))))
-    type sut = (char, int) t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Clear 
       | Add of (char * int) 
@@ -79,7 +85,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = create ()
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -224,12 +229,42 @@ module Spec =
     let postcond _ _ _ = true
     let run cmd__010_ sut__011_ =
       match cmd__010_ with
-      | Clear -> Res (unit, (clear sut__011_))
-      | Add tup -> Res (unit, (add sut__011_ tup))
-      | Add' tup_1 -> Res (unit, (add' sut__011_ tup_1))
-      | Add'' tup_2 -> Res (unit, (add'' sut__011_ tup_2))
-      | Size_tup -> Res ((tup2 int int), (size_tup sut__011_))
-      | Size_tup' -> Res ((tup3 int int int), (size_tup' sut__011_))
+      | Clear ->
+          Res
+            (unit,
+              (let tmp__012_ = SUT.pop sut__011_ in
+               let res__013_ = clear tmp__012_ in
+               (SUT.push tmp__012_ sut__011_; res__013_)))
+      | Add tup ->
+          Res
+            (unit,
+              (let tmp__014_ = SUT.pop sut__011_ in
+               let res__015_ = add tmp__014_ tup in
+               (SUT.push tmp__014_ sut__011_; res__015_)))
+      | Add' tup_1 ->
+          Res
+            (unit,
+              (let tmp__016_ = SUT.pop sut__011_ in
+               let res__017_ = add' tmp__016_ tup_1 in
+               (SUT.push tmp__016_ sut__011_; res__017_)))
+      | Add'' tup_2 ->
+          Res
+            (unit,
+              (let tmp__018_ = SUT.pop sut__011_ in
+               let res__019_ = add'' tmp__018_ tup_2 in
+               (SUT.push tmp__018_ sut__011_; res__019_)))
+      | Size_tup ->
+          Res
+            ((tup2 int int),
+              (let tmp__020_ = SUT.pop sut__011_ in
+               let res__021_ = size_tup tmp__020_ in
+               (SUT.push tmp__020_ sut__011_; res__021_)))
+      | Size_tup' ->
+          Res
+            ((tup3 int int int),
+              (let tmp__022_ = SUT.pop sut__011_ in
+               let res__023_ = size_tup' tmp__022_ in
+               (SUT.push tmp__022_ sut__011_; res__023_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()

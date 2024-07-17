@@ -28,13 +28,19 @@ let plus1_1 i =
                    pos_cnum = 572
                  }
              }))
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = t
+                             let init = Some (fun () -> make 42)
+                           end)
 module Spec =
   struct
     open STM
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Plus1 of int 
       | Plus2 of int 
@@ -75,7 +81,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = make 42
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -98,9 +103,14 @@ module Spec =
     let postcond _ _ _ = true
     let run cmd__010_ sut__011_ =
       match cmd__010_ with
-      | Plus1 i_1 -> Res (int, (plus1 i_1))
-      | Plus2 i_2 -> Res (int, (plus2 i_2))
-      | Get -> Res (int, (get sut__011_))
+      | Plus1 i_1 -> Res (int, (let res__012_ = plus1 i_1 in res__012_))
+      | Plus2 i_2 -> Res (int, (let res__013_ = plus2 i_2 in res__013_))
+      | Get ->
+          Res
+            (int,
+              (let tmp__014_ = SUT.pop sut__011_ in
+               let res__015_ = get tmp__014_ in
+               (SUT.push tmp__014_ sut__011_; res__015_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()

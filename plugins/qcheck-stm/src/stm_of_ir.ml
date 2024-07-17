@@ -304,24 +304,45 @@ let run_case config sut_name value =
         pexp_apply (evar "result") [ (Nolabel, ty_show); (Nolabel, evar "exn") ]
       else ty_show
     in
-    let call =
+    let suts, call =
       let efun = exp_of_ident value.id in
       let mk_arg = Option.fold ~none:eunit ~some:exp_of_ident in
       let rec aux ty args =
         match (ty.ptyp_desc, args) with
         | Ptyp_arrow (lb, l, r), xs when Cfg.is_sut config l ->
-            (lb, evar sut_name) :: aux r xs
-        | Ptyp_arrow (lb, _, r), x :: xs -> (lb, mk_arg x) :: aux r xs
+            let tmp = gen_symbol ~prefix:"tmp" () in
+            ([ tmp ], (lb, evar tmp)) :: aux r xs
+        | Ptyp_arrow (lb, _, r), x :: xs -> ([], (lb, mk_arg x)) :: aux r xs
         | _, [] -> []
         | _, _ ->
             failwith
               "shouldn't happen (list of arguments should be consistent with \
                type)"
       in
-      pexp_apply efun (aux value.ty (List.map snd value.args))
+      let suts, args = aux value.ty (List.map snd value.args) |> List.split in
+      (List.flatten suts, pexp_apply efun args)
     in
     let call = if may_raise_exception value then eprotect call else call in
-    let args = Some (pexp_tuple [ ty_show; call ]) in
+    let call_res = gen_symbol ~prefix:"res" () in
+    let pops body =
+      let expr = eapply (qualify [ "SUT" ] "pop") [ evar sut_name ] in
+      let vb = List.map (fun sut -> value_binding ~pat:(pvar sut) ~expr) suts in
+      if List.length vb > 0 then pexp_let Nonrecursive vb body else body
+    in
+    let pushes =
+      List.map
+        (fun sut ->
+          eapply (qualify [ "SUT" ] "push") [ evar sut; evar sut_name ])
+        (List.rev suts)
+    in
+    let tail = List.fold_right pexp_sequence pushes (evar call_res) in
+    let wrapped_call =
+      pexp_let Nonrecursive
+        [ value_binding ~pat:(pvar call_res) ~expr:call ]
+        tail
+      |> pops
+    in
+    let args = Some (pexp_tuple [ ty_show; wrapped_call ]) in
     pexp_construct res args |> ok
   in
   case ~lhs ~guard:None ~rhs |> ok
@@ -808,13 +829,21 @@ let cmd_show config ir =
   let expr = efun [ (Nolabel, pvar cmd_name) ] body in
   pstr_value Nonrecursive [ value_binding ~pat ~expr ] |> ok
 
-let sut_type cfg =
+let sut_module cfg =
+  let init_sut = [%stri let init = Some (fun () -> [%e cfg.Cfg.init_sut])] in
   let td =
     type_declaration ~name:(noloc "sut") ~params:[] ~cstrs:[]
       ~kind:Ptype_abstract ~private_:Public
       ~manifest:(Some cfg.Cfg.sut_core_type)
   in
-  pstr_type Recursive [ td ]
+  let sut_ty = pstr_type Recursive [ td ] in
+  [%str
+    module SUT = Ortac_runtime.SUT.Make (struct
+      [%%i sut_ty]
+      [%%i init_sut]
+    end)]
+
+let sut_defs = [ [%stri type sut = SUT.t]; [%stri let init_sut = SUT.create] ]
 
 (* This function generates an expression of the form
    ```
@@ -1102,7 +1131,6 @@ let stm config ir =
   let* ghost_types = ghost_types config ir.ghost_types in
   let* config, ghost_functions = ghost_functions config ir.ghost_functions in
   let warn = [%stri [@@@ocaml.warning "-26-27-69-32"]] in
-  let sut = sut_type config in
   let* cmd = cmd_type ir in
   let* cmd_show = cmd_show config ir in
   let state = state_type ir in
@@ -1121,11 +1149,6 @@ let stm config ir =
     in
     Option.value config.cleanup ~default
   in
-  let init_sut =
-    let pat = pvar "init_sut" in
-    let expr = efun [ (Nolabel, punit) ] config.Cfg.init_sut in
-    pstr_value Nonrecursive [ value_binding ~pat ~expr ]
-  in
   let open_mod m = pstr_open Ast_helper.(Opn.mk (Mod.ident (lident m))) in
   let spec_expr =
     pmod_structure
@@ -1134,13 +1157,12 @@ let stm config ir =
       @ Option.value config.ty_mod ~default:[]
       @ integer_ty_ext
       @ tuple_types ir
+      @ sut_defs
       @ [
-          sut;
           cmd;
           cmd_show;
           state;
           init_state;
-          init_sut;
           cleanup;
           arb_cmd;
           next_state;
@@ -1173,10 +1195,12 @@ let stm config ir =
                ortac_postcond;
            ])]
   in
+  let sut_mod = sut_module config in
   ok
     (warn
      :: open_mod module_name
      :: [%stri module Ortac_runtime = Ortac_runtime_qcheck_stm]
      :: ghost_types
     @ ghost_functions
+    @ sut_mod
     @ [ stm_spec; tests; check_init_state; postcond; call_tests ])

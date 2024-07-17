@@ -59,6 +59,11 @@ let proj e =
                    pos_cnum = 1063
                  }
              }))
+module SUT =
+  (Ortac_runtime.SUT.Make)(struct
+                             type sut = char t
+                             let init = Some (fun () -> make 42 'a')
+                           end)
 module Spec =
   struct
     open STM
@@ -88,7 +93,8 @@ module Spec =
     type _ ty +=  
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
-    type sut = char t
+    type sut = SUT.t
+    let init_sut = SUT.create
     type cmd =
       | Push_back of char elt 
       | Pop_back 
@@ -167,7 +173,6 @@ module Spec =
                           }
                       })))
       }
-    let init_sut () = make 42 'a'
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -702,41 +707,80 @@ module Spec =
     let postcond _ _ _ = true
     let run cmd__032_ sut__033_ =
       match cmd__032_ with
-      | Push_back x -> Res (unit, (push_back sut__033_ x))
+      | Push_back x ->
+          Res
+            (unit,
+              (let tmp__034_ = SUT.pop sut__033_ in
+               let res__035_ = push_back tmp__034_ x in
+               (SUT.push tmp__034_ sut__033_; res__035_)))
       | Pop_back ->
           Res
             ((result (elt char) exn),
-              (protect (fun () -> pop_back sut__033_) ()))
-      | Push_front x_1 -> Res (unit, (push_front sut__033_ x_1))
+              (let tmp__036_ = SUT.pop sut__033_ in
+               let res__037_ = protect (fun () -> pop_back tmp__036_) () in
+               (SUT.push tmp__036_ sut__033_; res__037_)))
+      | Push_front x_1 ->
+          Res
+            (unit,
+              (let tmp__038_ = SUT.pop sut__033_ in
+               let res__039_ = push_front tmp__038_ x_1 in
+               (SUT.push tmp__038_ sut__033_; res__039_)))
       | Pop_front ->
           Res
             ((result (elt char) exn),
-              (protect (fun () -> pop_front sut__033_) ()))
+              (let tmp__040_ = SUT.pop sut__033_ in
+               let res__041_ = protect (fun () -> pop_front tmp__040_) () in
+               (SUT.push tmp__040_ sut__033_; res__041_)))
       | Insert_at (i_1, x_2) ->
           Res
             ((result unit exn),
-              (protect (fun () -> insert_at sut__033_ i_1 x_2) ()))
+              (let tmp__042_ = SUT.pop sut__033_ in
+               let res__043_ =
+                 protect (fun () -> insert_at tmp__042_ i_1 x_2) () in
+               (SUT.push tmp__042_ sut__033_; res__043_)))
       | Pop_at i_2 ->
           Res
             ((result (elt char) exn),
-              (protect (fun () -> pop_at sut__033_ i_2) ()))
+              (let tmp__044_ = SUT.pop sut__033_ in
+               let res__045_ = protect (fun () -> pop_at tmp__044_ i_2) () in
+               (SUT.push tmp__044_ sut__033_; res__045_)))
       | Delete_at i_3 ->
           Res
             ((result unit exn),
-              (protect (fun () -> delete_at sut__033_ i_3) ()))
+              (let tmp__046_ = SUT.pop sut__033_ in
+               let res__047_ = protect (fun () -> delete_at tmp__046_ i_3) () in
+               (SUT.push tmp__046_ sut__033_; res__047_)))
       | Get i_4 ->
           Res
             ((result (elt char) exn),
-              (protect (fun () -> get sut__033_ i_4) ()))
+              (let tmp__048_ = SUT.pop sut__033_ in
+               let res__049_ = protect (fun () -> get tmp__048_ i_4) () in
+               (SUT.push tmp__048_ sut__033_; res__049_)))
       | Set (i_5, v) ->
           Res
-            ((result unit exn), (protect (fun () -> set sut__033_ i_5 v) ()))
-      | Length -> Res (int, (length sut__033_))
-      | Is_empty -> Res (bool, (is_empty sut__033_))
+            ((result unit exn),
+              (let tmp__050_ = SUT.pop sut__033_ in
+               let res__051_ = protect (fun () -> set tmp__050_ i_5 v) () in
+               (SUT.push tmp__050_ sut__033_; res__051_)))
+      | Length ->
+          Res
+            (int,
+              (let tmp__052_ = SUT.pop sut__033_ in
+               let res__053_ = length tmp__052_ in
+               (SUT.push tmp__052_ sut__033_; res__053_)))
+      | Is_empty ->
+          Res
+            (bool,
+              (let tmp__054_ = SUT.pop sut__033_ in
+               let res__055_ = is_empty tmp__054_ in
+               (SUT.push tmp__054_ sut__033_; res__055_)))
       | Fill (pos, len, x_3) ->
           Res
             ((result unit exn),
-              (protect (fun () -> fill sut__033_ pos len x_3) ()))
+              (let tmp__056_ = SUT.pop sut__033_ in
+               let res__057_ =
+                 protect (fun () -> fill tmp__056_ pos len x_3) () in
+               (SUT.push tmp__056_ sut__033_; res__057_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
