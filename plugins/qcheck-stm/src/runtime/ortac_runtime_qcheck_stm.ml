@@ -26,6 +26,33 @@ type _ ty += Dummy : _ ty
 let dummy = (Dummy, fun _ -> Printf.sprintf "unknown value")
 let is_dummy = function Res ((Dummy, _), _) -> true | _ -> false
 
+module Model = struct
+  module Make (M : sig
+    type elt
+
+    val init : elt option
+  end) : sig
+    type elt
+    type t
+
+    val create : unit -> t
+    val size : t -> int
+    val drop_n : t -> int -> t
+    val push : t -> elt -> t
+    val get : t -> int -> elt
+  end
+  with type elt := M.elt = struct
+    type elt = M.elt
+    type t = elt list
+
+    let create () : t = Option.fold ~none:[] ~some:(fun i -> [ i ]) M.init
+    let size = List.length
+    let drop_n t n = List.filteri (fun idx _ -> idx >= n) t
+    let push t e = e :: t
+    let get = List.nth
+  end
+end
+
 module SUT = struct
   module Make (M : sig
     type sut

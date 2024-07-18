@@ -33,6 +33,40 @@ module SUT =
                              type sut = t
                              let init = Some (fun () -> make 42)
                            end)
+module ModelElt =
+  struct
+    type nonrec elt = {
+      value: Ortac_runtime.integer }
+    let init =
+      Some
+        (let i_4 = 42 in
+         {
+           value =
+             (try Ortac_runtime.Gospelstdlib.integer_of_int i_4
+              with
+              | e ->
+                  raise
+                    (Ortac_runtime.Partial_function
+                       (e,
+                         {
+                           Ortac_runtime.start =
+                             {
+                               pos_fname = "record.mli";
+                               pos_lnum = 7;
+                               pos_bol = 285;
+                               pos_cnum = 307
+                             };
+                           Ortac_runtime.stop =
+                             {
+                               pos_fname = "record.mli";
+                               pos_lnum = 7;
+                               pos_bol = 285;
+                               pos_cnum = 308
+                             }
+                         })))
+         })
+  end
+module Model = (Ortac_runtime.Model.Make)(ModelElt)
 module Spec =
   struct
     open STM
@@ -41,6 +75,8 @@ module Spec =
     let integer = (Integer, Ortac_runtime.string_of_integer)
     type sut = SUT.t
     let init_sut = SUT.create
+    type state = Model.t
+    let init_state = Model.create ()
     type cmd =
       | Plus1 of int 
       | Plus2 of int 
@@ -52,35 +88,6 @@ module Spec =
       | Plus2 i_2 ->
           Format.asprintf "%s %a" "plus2" (Util.Pp.pp_int true) i_2
       | Get -> Format.asprintf "%s sut" "get"
-    type nonrec state = {
-      value: Ortac_runtime.integer }
-    let init_state =
-      let i_4 = 42 in
-      {
-        value =
-          (try Ortac_runtime.Gospelstdlib.integer_of_int i_4
-           with
-           | e ->
-               raise
-                 (Ortac_runtime.Partial_function
-                    (e,
-                      {
-                        Ortac_runtime.start =
-                          {
-                            pos_fname = "record.mli";
-                            pos_lnum = 7;
-                            pos_bol = 285;
-                            pos_cnum = 307
-                          };
-                        Ortac_runtime.stop =
-                          {
-                            pos_fname = "record.mli";
-                            pos_lnum = 7;
-                            pos_bol = 285;
-                            pos_cnum = 308
-                          }
-                      })))
-      }
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -95,30 +102,30 @@ module Spec =
       | Plus1 i_1 -> state__003_
       | Plus2 i_2 -> state__003_
       | Get -> state__003_
-    let precond cmd__008_ state__009_ =
-      match cmd__008_ with
+    let precond cmd__025_ state__026_ =
+      match cmd__025_ with
       | Plus1 i_1 -> true
       | Plus2 i_2 -> true
       | Get -> true
     let postcond _ _ _ = true
-    let run cmd__010_ sut__011_ =
-      match cmd__010_ with
-      | Plus1 i_1 -> Res (int, (let res__012_ = plus1 i_1 in res__012_))
-      | Plus2 i_2 -> Res (int, (let res__013_ = plus2 i_2 in res__013_))
+    let run cmd__027_ sut__028_ =
+      match cmd__027_ with
+      | Plus1 i_1 -> Res (int, (let res__029_ = plus1 i_1 in res__029_))
+      | Plus2 i_2 -> Res (int, (let res__030_ = plus2 i_2 in res__030_))
       | Get ->
           Res
             (int,
-              (let tmp__014_ = SUT.pop sut__011_ in
-               let res__015_ = get tmp__014_ in
-               (SUT.push tmp__014_ sut__011_; res__015_)))
+              (let tmp__031_ = SUT.pop sut__028_ in
+               let res__032_ = get tmp__031_ in
+               (SUT.push tmp__031_ sut__028_; res__032_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
-let ortac_postcond cmd__004_ state__005_ res__006_ =
+let ortac_postcond cmd__005_ state__006_ res__007_ =
   let open Spec in
     let open STM in
-      let new_state__007_ = lazy (next_state cmd__004_ state__005_) in
-      match (cmd__004_, res__006_) with
+      let new_state__008_ = lazy (next_state cmd__005_ state__006_) in
+      match (cmd__005_, res__007_) with
       | (Plus1 i_1, Res ((Int, _), i1)) ->
           if
             (try
@@ -276,9 +283,12 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
       | (Get, Res ((Int, _), i_3)) ->
           Ortac_runtime.append
             (if
+               let r_new__016_ =
+                 lazy (Model.get (Lazy.force new_state__008_) 0) in
+               let r_old__015_ = lazy (Model.get state__006_ 0) in
                try
                  (Ortac_runtime.Gospelstdlib.integer_of_int i_3) =
-                   (Lazy.force new_state__007_).value
+                   (Lazy.force r_new__016_).value
                with
                | e ->
                    raise
@@ -307,7 +317,11 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                     (Either.right
                        (Res
                           (integer,
-                            (try (Lazy.force new_state__007_).value
+                            (let r_new__012_ =
+                               lazy
+                                 (Model.get (Lazy.force new_state__008_) 0) in
+                             let r_old__011_ = lazy (Model.get state__006_ 0) in
+                             try (Lazy.force r_new__012_).value
                              with
                              | e ->
                                  raise
@@ -348,6 +362,9 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                        })]))
             (Ortac_runtime.append
                (if
+                  let r_new__020_ =
+                    lazy (Model.get (Lazy.force new_state__008_) 0) in
+                  let r_old__019_ = lazy (Model.get state__006_ 0) in
                   try
                     (plus1_1 (Ortac_runtime.Gospelstdlib.integer_of_int i_3))
                       =
@@ -382,7 +399,12 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                        (Either.right
                           (Res
                              (integer,
-                               (try (Lazy.force new_state__007_).value
+                               (let r_new__012_ =
+                                  lazy
+                                    (Model.get (Lazy.force new_state__008_) 0) in
+                                let r_old__011_ =
+                                  lazy (Model.get state__006_ 0) in
+                                try (Lazy.force r_new__012_).value
                                 with
                                 | e ->
                                     raise
@@ -422,6 +444,9 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                               }
                           })]))
                (if
+                  let r_new__022_ =
+                    lazy (Model.get (Lazy.force new_state__008_) 0) in
+                  let r_old__021_ = lazy (Model.get state__006_ 0) in
                   try
                     (Ortac_runtime.Gospelstdlib.integer_of_int (plus2 i_3)) =
                       (Ortac_runtime.Gospelstdlib.(+)
@@ -455,7 +480,12 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                        (Either.right
                           (Res
                              (integer,
-                               (try (Lazy.force new_state__007_).value
+                               (let r_new__012_ =
+                                  lazy
+                                    (Model.get (Lazy.force new_state__008_) 0) in
+                                let r_old__011_ =
+                                  lazy (Model.get state__006_ 0) in
+                                try (Lazy.force r_new__012_).value
                                 with
                                 | e ->
                                     raise

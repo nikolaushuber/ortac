@@ -36,6 +36,41 @@ module SUT =
                              let init =
                                Some (fun () -> create ~random:false 16)
                            end)
+module ModelElt =
+  struct
+    type nonrec elt = {
+      contents: (char * int) list }
+    let init =
+      Some
+        (let random = false
+         and size = 16 in
+         {
+           contents =
+             (try []
+              with
+              | e ->
+                  raise
+                    (Ortac_runtime.Partial_function
+                       (e,
+                         {
+                           Ortac_runtime.start =
+                             {
+                               pos_fname = "hashtbl.mli";
+                               pos_lnum = 7;
+                               pos_bol = 318;
+                               pos_cnum = 343
+                             };
+                           Ortac_runtime.stop =
+                             {
+                               pos_fname = "hashtbl.mli";
+                               pos_lnum = 7;
+                               pos_bol = 318;
+                               pos_cnum = 345
+                             }
+                         })))
+         })
+  end
+module Model = (Ortac_runtime.Model.Make)(ModelElt)
 module Spec =
   struct
     open STM
@@ -44,6 +79,8 @@ module Spec =
     let integer = (Integer, Ortac_runtime.string_of_integer)
     type sut = SUT.t
     let init_sut = SUT.create
+    type state = Model.t
+    let init_state = Model.create ()
     type cmd =
       | Clear 
       | Reset 
@@ -77,36 +114,6 @@ module Spec =
           Format.asprintf "%s sut %a %a" "replace" (Util.Pp.pp_char true) a_8
             (Util.Pp.pp_int true) b_3
       | Length -> Format.asprintf "%s sut" "length"
-    type nonrec state = {
-      contents: (char * int) list }
-    let init_state =
-      let random = false
-      and size = 16 in
-      {
-        contents =
-          (try []
-           with
-           | e ->
-               raise
-                 (Ortac_runtime.Partial_function
-                    (e,
-                      {
-                        Ortac_runtime.start =
-                          {
-                            pos_fname = "hashtbl.mli";
-                            pos_lnum = 7;
-                            pos_bol = 318;
-                            pos_cnum = 343
-                          };
-                        Ortac_runtime.stop =
-                          {
-                            pos_fname = "hashtbl.mli";
-                            pos_lnum = 7;
-                            pos_bol = 318;
-                            pos_cnum = 345
-                          }
-                      })))
-      }
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -128,142 +135,152 @@ module Spec =
     let next_state cmd__002_ state__003_ =
       match cmd__002_ with
       | Clear ->
-          {
-            contents =
-              ((try []
-                with
-                | e ->
-                    raise
-                      (Ortac_runtime.Partial_function
-                         (e,
-                           {
-                             Ortac_runtime.start =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 12;
-                                 pos_bol = 486;
-                                 pos_cnum = 511
-                               };
-                             Ortac_runtime.stop =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 12;
-                                 pos_bol = 486;
-                                 pos_cnum = 513
-                               }
-                           }))))
-          }
+          let tmp__004_ = Model.get state__003_ 0 in
+          Model.push (Model.drop_n state__003_ 1)
+            {
+              contents =
+                (try []
+                 with
+                 | e ->
+                     raise
+                       (Ortac_runtime.Partial_function
+                          (e,
+                            {
+                              Ortac_runtime.start =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 12;
+                                  pos_bol = 486;
+                                  pos_cnum = 511
+                                };
+                              Ortac_runtime.stop =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 12;
+                                  pos_bol = 486;
+                                  pos_cnum = 513
+                                }
+                            })))
+            }
       | Reset ->
-          {
-            contents =
-              ((try []
-                with
-                | e ->
-                    raise
-                      (Ortac_runtime.Partial_function
-                         (e,
-                           {
-                             Ortac_runtime.start =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 17;
-                                 pos_bol = 655;
-                                 pos_cnum = 680
-                               };
-                             Ortac_runtime.stop =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 17;
-                                 pos_bol = 655;
-                                 pos_cnum = 682
-                               }
-                           }))))
-          }
+          let tmp__005_ = Model.get state__003_ 0 in
+          Model.push (Model.drop_n state__003_ 1)
+            {
+              contents =
+                (try []
+                 with
+                 | e ->
+                     raise
+                       (Ortac_runtime.Partial_function
+                          (e,
+                            {
+                              Ortac_runtime.start =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 17;
+                                  pos_bol = 655;
+                                  pos_cnum = 680
+                                };
+                              Ortac_runtime.stop =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 17;
+                                  pos_bol = 655;
+                                  pos_cnum = 682
+                                }
+                            })))
+            }
       | Add (a_2, b_2) ->
-          {
-            contents =
-              ((try (a_2, b_2) :: state__003_.contents
-                with
-                | e ->
-                    raise
-                      (Ortac_runtime.Partial_function
-                         (e,
-                           {
-                             Ortac_runtime.start =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 26;
-                                 pos_bol = 1020;
-                                 pos_cnum = 1045
-                               };
-                             Ortac_runtime.stop =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 26;
-                                 pos_bol = 1020;
-                                 pos_cnum = 1069
-                               }
-                           }))))
-          }
+          let tmp__006_ = Model.get state__003_ 0 in
+          Model.push (Model.drop_n state__003_ 1)
+            {
+              contents =
+                (try (a_2, b_2) :: tmp__006_.contents
+                 with
+                 | e ->
+                     raise
+                       (Ortac_runtime.Partial_function
+                          (e,
+                            {
+                              Ortac_runtime.start =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 26;
+                                  pos_bol = 1020;
+                                  pos_cnum = 1045
+                                };
+                              Ortac_runtime.stop =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 26;
+                                  pos_bol = 1020;
+                                  pos_cnum = 1069
+                                }
+                            })))
+            }
       | Find a_3 -> state__003_
       | Find_opt a_4 -> state__003_
       | Find_all a_5 -> state__003_
       | Mem a_6 -> state__003_
       | Remove a_7 ->
-          {
-            contents =
-              ((try remove_first a_7 state__003_.contents
-                with
-                | e ->
-                    raise
-                      (Ortac_runtime.Partial_function
-                         (e,
-                           {
-                             Ortac_runtime.start =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 56;
-                                 pos_bol = 2643;
-                                 pos_cnum = 2668
-                               };
-                             Ortac_runtime.stop =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 56;
-                                 pos_bol = 2643;
-                                 pos_cnum = 2680
-                               }
-                           }))))
-          }
+          let tmp__011_ = Model.get state__003_ 0 in
+          Model.push (Model.drop_n state__003_ 1)
+            {
+              contents =
+                (try remove_first a_7 tmp__011_.contents
+                 with
+                 | e ->
+                     raise
+                       (Ortac_runtime.Partial_function
+                          (e,
+                            {
+                              Ortac_runtime.start =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 56;
+                                  pos_bol = 2643;
+                                  pos_cnum = 2668
+                                };
+                              Ortac_runtime.stop =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 56;
+                                  pos_bol = 2643;
+                                  pos_cnum = 2680
+                                }
+                            })))
+            }
       | Replace (a_8, b_3) ->
-          {
-            contents =
-              ((try (a_8, b_3) :: (remove_first a_8 state__003_.contents)
-                with
-                | e ->
-                    raise
-                      (Ortac_runtime.Partial_function
-                         (e,
-                           {
-                             Ortac_runtime.start =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 61;
-                                 pos_bol = 2890;
-                                 pos_cnum = 2915
-                               };
-                             Ortac_runtime.stop =
-                               {
-                                 pos_fname = "hashtbl.mli";
-                                 pos_lnum = 61;
-                                 pos_bol = 2890;
-                                 pos_cnum = 2956
-                               }
-                           }))))
-          }
+          let tmp__012_ = Model.get state__003_ 0 in
+          Model.push (Model.drop_n state__003_ 1)
+            {
+              contents =
+                (try (a_8, b_3) :: (remove_first a_8 tmp__012_.contents)
+                 with
+                 | e ->
+                     raise
+                       (Ortac_runtime.Partial_function
+                          (e,
+                            {
+                              Ortac_runtime.start =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 61;
+                                  pos_bol = 2890;
+                                  pos_cnum = 2915
+                                };
+                              Ortac_runtime.stop =
+                                {
+                                  pos_fname = "hashtbl.mli";
+                                  pos_lnum = 61;
+                                  pos_bol = 2890;
+                                  pos_cnum = 2956
+                                }
+                            })))
+            }
       | Length -> state__003_
-    let precond cmd__008_ state__009_ =
-      match cmd__008_ with
+    let precond cmd__044_ state__045_ =
+      match cmd__044_ with
       | Clear -> true
       | Reset -> true
       | Add (a_2, b_2) -> true
@@ -275,76 +292,76 @@ module Spec =
       | Replace (a_8, b_3) -> true
       | Length -> true
     let postcond _ _ _ = true
-    let run cmd__010_ sut__011_ =
-      match cmd__010_ with
+    let run cmd__046_ sut__047_ =
+      match cmd__046_ with
       | Clear ->
           Res
             (unit,
-              (let tmp__012_ = SUT.pop sut__011_ in
-               let res__013_ = clear tmp__012_ in
-               (SUT.push tmp__012_ sut__011_; res__013_)))
+              (let tmp__048_ = SUT.pop sut__047_ in
+               let res__049_ = clear tmp__048_ in
+               (SUT.push tmp__048_ sut__047_; res__049_)))
       | Reset ->
           Res
             (unit,
-              (let tmp__014_ = SUT.pop sut__011_ in
-               let res__015_ = reset tmp__014_ in
-               (SUT.push tmp__014_ sut__011_; res__015_)))
+              (let tmp__050_ = SUT.pop sut__047_ in
+               let res__051_ = reset tmp__050_ in
+               (SUT.push tmp__050_ sut__047_; res__051_)))
       | Add (a_2, b_2) ->
           Res
             (unit,
-              (let tmp__016_ = SUT.pop sut__011_ in
-               let res__017_ = add tmp__016_ a_2 b_2 in
-               (SUT.push tmp__016_ sut__011_; res__017_)))
+              (let tmp__052_ = SUT.pop sut__047_ in
+               let res__053_ = add tmp__052_ a_2 b_2 in
+               (SUT.push tmp__052_ sut__047_; res__053_)))
       | Find a_3 ->
           Res
             ((result int exn),
-              (let tmp__018_ = SUT.pop sut__011_ in
-               let res__019_ = protect (fun () -> find tmp__018_ a_3) () in
-               (SUT.push tmp__018_ sut__011_; res__019_)))
+              (let tmp__054_ = SUT.pop sut__047_ in
+               let res__055_ = protect (fun () -> find tmp__054_ a_3) () in
+               (SUT.push tmp__054_ sut__047_; res__055_)))
       | Find_opt a_4 ->
           Res
             ((option int),
-              (let tmp__020_ = SUT.pop sut__011_ in
-               let res__021_ = find_opt tmp__020_ a_4 in
-               (SUT.push tmp__020_ sut__011_; res__021_)))
+              (let tmp__056_ = SUT.pop sut__047_ in
+               let res__057_ = find_opt tmp__056_ a_4 in
+               (SUT.push tmp__056_ sut__047_; res__057_)))
       | Find_all a_5 ->
           Res
             ((list int),
-              (let tmp__022_ = SUT.pop sut__011_ in
-               let res__023_ = find_all tmp__022_ a_5 in
-               (SUT.push tmp__022_ sut__011_; res__023_)))
+              (let tmp__058_ = SUT.pop sut__047_ in
+               let res__059_ = find_all tmp__058_ a_5 in
+               (SUT.push tmp__058_ sut__047_; res__059_)))
       | Mem a_6 ->
           Res
             (bool,
-              (let tmp__024_ = SUT.pop sut__011_ in
-               let res__025_ = mem tmp__024_ a_6 in
-               (SUT.push tmp__024_ sut__011_; res__025_)))
+              (let tmp__060_ = SUT.pop sut__047_ in
+               let res__061_ = mem tmp__060_ a_6 in
+               (SUT.push tmp__060_ sut__047_; res__061_)))
       | Remove a_7 ->
           Res
             (unit,
-              (let tmp__026_ = SUT.pop sut__011_ in
-               let res__027_ = remove tmp__026_ a_7 in
-               (SUT.push tmp__026_ sut__011_; res__027_)))
+              (let tmp__062_ = SUT.pop sut__047_ in
+               let res__063_ = remove tmp__062_ a_7 in
+               (SUT.push tmp__062_ sut__047_; res__063_)))
       | Replace (a_8, b_3) ->
           Res
             (unit,
-              (let tmp__028_ = SUT.pop sut__011_ in
-               let res__029_ = replace tmp__028_ a_8 b_3 in
-               (SUT.push tmp__028_ sut__011_; res__029_)))
+              (let tmp__064_ = SUT.pop sut__047_ in
+               let res__065_ = replace tmp__064_ a_8 b_3 in
+               (SUT.push tmp__064_ sut__047_; res__065_)))
       | Length ->
           Res
             (int,
-              (let tmp__030_ = SUT.pop sut__011_ in
-               let res__031_ = length tmp__030_ in
-               (SUT.push tmp__030_ sut__011_; res__031_)))
+              (let tmp__066_ = SUT.pop sut__047_ in
+               let res__067_ = length tmp__066_ in
+               (SUT.push tmp__066_ sut__047_; res__067_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
-let ortac_postcond cmd__004_ state__005_ res__006_ =
+let ortac_postcond cmd__014_ state__015_ res__016_ =
   let open Spec in
     let open STM in
-      let new_state__007_ = lazy (next_state cmd__004_ state__005_) in
-      match (cmd__004_, res__006_) with
+      let new_state__017_ = lazy (next_state cmd__014_ state__015_) in
+      match (cmd__014_, res__016_) with
       | (Clear, Res ((Unit, _), _)) -> None
       | (Reset, Res ((Unit, _), _)) -> None
       | (Add (a_2, b_2), Res ((Unit, _), _)) -> None
@@ -352,9 +369,12 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
           (match b_4 with
            | Ok b_4 ->
                if
+                 let h_new__022_ =
+                   lazy (Model.get (Lazy.force new_state__017_) 0) in
+                 let h_old__021_ = lazy (Model.get state__015_ 0) in
                  (try
                     Ortac_runtime.Gospelstdlib.List.mem (a_3, b_4)
-                      (Lazy.force new_state__007_).contents
+                      (Lazy.force h_new__022_).contents
                   with
                   | e ->
                       raise
@@ -400,12 +420,15 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                          })])
            | Error (Not_found) ->
                if
+                 let h_new__026_ =
+                   lazy (Model.get (Lazy.force new_state__017_) 0) in
+                 let h_old__025_ = lazy (Model.get state__015_ 0) in
                  (try
                     not
                       (Ortac_runtime.Gospelstdlib.List.mem a_3
                          (Ortac_runtime.Gospelstdlib.List.map
                             Ortac_runtime.Gospelstdlib.fst
-                            (Lazy.force new_state__007_).contents))
+                            (Lazy.force h_new__026_).contents))
                   with
                   | e ->
                       raise
@@ -452,6 +475,8 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
            | _ -> None)
       | (Find_opt a_4, Res ((Option (Int), _), o)) ->
           if
+            let h_new__029_ = lazy (Model.get (Lazy.force new_state__017_) 0) in
+            let h_old__028_ = lazy (Model.get state__015_ 0) in
             (try
                (match o with
                 | None ->
@@ -460,13 +485,13 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                         (Ortac_runtime.Gospelstdlib.List.mem a_4
                            (Ortac_runtime.Gospelstdlib.List.map
                               Ortac_runtime.Gospelstdlib.fst
-                              (Lazy.force new_state__007_).contents))
+                              (Lazy.force h_new__029_).contents))
                     then true
                     else false
                 | Some b_5 ->
                     if
                       Ortac_runtime.Gospelstdlib.List.mem (a_4, b_5)
-                        (Lazy.force new_state__007_).contents
+                        (Lazy.force h_new__029_).contents
                     then true
                     else false)
                  = true
@@ -515,12 +540,14 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                     })])
       | (Find_all a_5, Res ((List (Int), _), bs)) ->
           if
+            let h_new__032_ = lazy (Model.get (Lazy.force new_state__017_) 0) in
+            let h_old__031_ = lazy (Model.get state__015_ 0) in
             (try
                (Ortac_runtime.Gospelstdlib.List.to_seq bs) =
                  (Ortac_runtime.Gospelstdlib.Sequence.filter_map
                     (fun (x_1, y) -> if x_1 = a_5 then Some y else None)
                     (Ortac_runtime.Gospelstdlib.List.to_seq
-                       (Lazy.force new_state__007_).contents))
+                       (Lazy.force h_new__032_).contents))
              with
              | e ->
                  raise
@@ -566,12 +593,14 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                     })])
       | (Mem a_6, Res ((Bool, _), b_6)) ->
           if
+            let h_new__035_ = lazy (Model.get (Lazy.force new_state__017_) 0) in
+            let h_old__034_ = lazy (Model.get state__015_ 0) in
             (try
                (b_6 = true) =
                  (Ortac_runtime.Gospelstdlib.List.mem a_6
                     (Ortac_runtime.Gospelstdlib.List.map
                        Ortac_runtime.Gospelstdlib.fst
-                       (Lazy.force new_state__007_).contents))
+                       (Lazy.force h_new__035_).contents))
              with
              | e ->
                  raise
@@ -619,10 +648,12 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
       | (Replace (a_8, b_3), Res ((Unit, _), _)) -> None
       | (Length, Res ((Int, _), i)) ->
           if
+            let h_new__042_ = lazy (Model.get (Lazy.force new_state__017_) 0) in
+            let h_old__041_ = lazy (Model.get state__015_ 0) in
             (try
                (Ortac_runtime.Gospelstdlib.integer_of_int i) =
                  (Ortac_runtime.Gospelstdlib.List.length
-                    (Lazy.force new_state__007_).contents)
+                    (Lazy.force h_new__042_).contents)
              with
              | e ->
                  raise
@@ -651,9 +682,12 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
                  (Either.right
                     (Res
                        (integer,
-                         (try
+                         (let h_new__040_ =
+                            lazy (Model.get (Lazy.force new_state__017_) 0) in
+                          let h_old__039_ = lazy (Model.get state__015_ 0) in
+                          try
                             Ortac_runtime.Gospelstdlib.List.length
-                              (Lazy.force new_state__007_).contents
+                              (Lazy.force h_new__040_).contents
                           with
                           | e ->
                               raise

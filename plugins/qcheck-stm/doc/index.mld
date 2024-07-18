@@ -308,8 +308,8 @@ $ grep -A 1 "type cmd" foo.ml
     type cmd =
       | Type_not_supported of new_type
 $ grep -A 3 "let run" foo.ml
-    let run cmd__010_ sut__011_ =
-      match cmd__010_ with
+    let run cmd__012_ sut__013_ =
+      match cmd__012_ with
       | Type_not_supported x ->
           Res
 ]}

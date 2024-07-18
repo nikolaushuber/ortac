@@ -8,6 +8,44 @@ module SUT =
                              type sut = int t
                              let init = Some (fun () -> make 16 0)
                            end)
+module ModelElt =
+  struct
+    type nonrec elt = {
+      contents: int list }
+    let init =
+      Some
+        (let i = 16
+         and a_2 = 0 in
+         {
+           contents =
+             (try
+                Ortac_runtime.Gospelstdlib.List.init
+                  (Ortac_runtime.Gospelstdlib.integer_of_int i)
+                  (fun j -> a_2)
+              with
+              | e ->
+                  raise
+                    (Ortac_runtime.Partial_function
+                       (e,
+                         {
+                           Ortac_runtime.start =
+                             {
+                               pos_fname = "test_without_sut.mli";
+                               pos_lnum = 6;
+                               pos_bol = 265;
+                               pos_cnum = 290
+                             };
+                           Ortac_runtime.stop =
+                             {
+                               pos_fname = "test_without_sut.mli";
+                               pos_lnum = 6;
+                               pos_bol = 265;
+                               pos_cnum = 314
+                             }
+                         })))
+         })
+  end
+module Model = (Ortac_runtime.Model.Make)(ModelElt)
 module Spec =
   struct
     open STM
@@ -22,6 +60,8 @@ module Spec =
     let integer = (Integer, Ortac_runtime.string_of_integer)
     type sut = SUT.t
     let init_sut = SUT.create
+    type state = Model.t
+    let init_state = Model.create ()
     type cmd =
       | Add of int * int 
     let show_cmd cmd__001_ =
@@ -29,38 +69,6 @@ module Spec =
       | Add (a_1, b) ->
           Format.asprintf "%s %a %a" "add" (Util.Pp.pp_int true) a_1
             (Util.Pp.pp_int true) b
-    type nonrec state = {
-      contents: int list }
-    let init_state =
-      let i = 16
-      and a_2 = 0 in
-      {
-        contents =
-          (try
-             Ortac_runtime.Gospelstdlib.List.init
-               (Ortac_runtime.Gospelstdlib.integer_of_int i) (fun j -> a_2)
-           with
-           | e ->
-               raise
-                 (Ortac_runtime.Partial_function
-                    (e,
-                      {
-                        Ortac_runtime.start =
-                          {
-                            pos_fname = "test_without_sut.mli";
-                            pos_lnum = 6;
-                            pos_bol = 265;
-                            pos_cnum = 290
-                          };
-                        Ortac_runtime.stop =
-                          {
-                            pos_fname = "test_without_sut.mli";
-                            pos_lnum = 6;
-                            pos_bol = 265;
-                            pos_cnum = 314
-                          }
-                      })))
-      }
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
