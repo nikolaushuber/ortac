@@ -92,9 +92,9 @@ let subst_term state ?(out_of_scope = []) ~gos_t ?(old_lz = false) ~old_t
     match term.t_node with
     (* First: the only case where substitution happens, ie x.model *)
     | Tfield (({ t_node = Tvar { vs_name; vs_ty }; _ } as subt), ls)
-      when Ident.equal vs_name gos_t ->
+      when List.mem vs_name gos_t ->
         if List.exists (fun (m, _) -> Ident.equal m ls.ls_name) state then
-          match cur_t with
+          match List.assoc_opt vs_name cur_t with
           | Some cur_t ->
               let t = { subt with t_node = Tvar { vs_name = cur_t; vs_ty } } in
               let t = if cur_lz then lazy_force t else t in
@@ -104,15 +104,15 @@ let subst_term state ?(out_of_scope = []) ~gos_t ?(old_lz = false) ~old_t
                 (ImpossibleSubst
                    ( subt,
                      match (new_t, old_t) with
-                     | None, None -> `Never
-                     | None, _ -> `New
+                     | [], [] -> `Never
+                     | [], _ -> `New
                      | _, _ -> `Old ))
         else
           (* case x.f where f is _not_ a model field *)
           raise (ImpossibleSubst (term, `NotModel))
     (* If the first case didn't match, it must be because [gos_t] is not used to
        access one of its model fields, so we error out *)
-    | Tvar { vs_name; _ } when Ident.equal vs_name gos_t ->
+    | Tvar { vs_name; _ } when List.mem vs_name gos_t ->
         raise (ImpossibleSubst (term, `NotModel))
     (* Then, we check if the variable is not out_of_scope in the function we are building *)
     | Tvar { vs_name; _ } when List.exists (Ident.equal vs_name) out_of_scope ->
@@ -147,14 +147,10 @@ let subst_term state ?(out_of_scope = []) ~gos_t ?(old_lz = false) ~old_t
   with ImpossibleSubst (t, b) ->
     error (Impossible_term_substitution b, t.t_loc)
 
-let translate_checks config state value state_ident t =
+let translate_checks config state value sut_map t =
   let open Reserr in
-  match value.sut_var with
-  | Some sut_var ->
-      subst_term state ~gos_t:sut_var ~old_t:(Some state_ident)
-        ~new_t:(Some state_ident) t.term
-      >>= ocaml_of_term config
-  | None -> ocaml_of_term config t.term
+  subst_term state ~gos_t:value.sut_vars ~old_t:sut_map ~new_t:sut_map t.term
+  >>= ocaml_of_term config
 
 let str_of_ident = Fmt.str "%a" Ident.pp
 let longident_loc_of_ident id = str_of_ident id |> lident
@@ -307,27 +303,38 @@ let run_case config sut_name value =
     let suts, call =
       let efun = exp_of_ident value.id in
       let mk_arg = Option.fold ~none:eunit ~some:exp_of_ident in
-      let rec aux ty args =
-        match (ty.ptyp_desc, args) with
-        | Ptyp_arrow (lb, l, r), xs when Cfg.is_sut config l ->
-            let tmp = gen_symbol ~prefix:"tmp" () in
-            ([ tmp ], (lb, evar tmp)) :: aux r xs
-        | Ptyp_arrow (lb, _, r), x :: xs -> ([], (lb, mk_arg x)) :: aux r xs
-        | _, [] -> []
-        | _, _ ->
+      let rec aux ty args sut_vars =
+        match (ty.ptyp_desc, args, sut_vars) with
+        | Ptyp_arrow (lb, l, r), xs, sut :: rest when Cfg.is_sut config l ->
+            let tmp = gen_symbol ~prefix:(str_of_ident sut) () in
+            ([ tmp ], (lb, evar tmp)) :: aux r xs rest
+        | Ptyp_arrow (lb, _, r), x :: xs, suts ->
+            ([], (lb, mk_arg x)) :: aux r xs suts
+        | _, [], _ -> []
+        | _, _, _ ->
             failwith
               "shouldn't happen (list of arguments should be consistent with \
                type)"
       in
-      let suts, args = aux value.ty (List.map snd value.args) |> List.split in
-      (List.flatten suts, pexp_apply efun args)
+      let suts, args =
+        aux value.ty (List.map snd value.args) (List.rev value.sut_vars)
+        |> List.split
+      in
+      (* Have to reverse the list of SUTs to be conformant with value.sut_vars *)
+      (List.rev (List.flatten suts), pexp_apply efun args)
     in
     let call = if may_raise_exception value then eprotect call else call in
     let call_res = gen_symbol ~prefix:"res" () in
     let pops body =
-      let expr = eapply (qualify [ "SUT" ] "pop") [ evar sut_name ] in
-      let vb = List.map (fun sut -> value_binding ~pat:(pvar sut) ~expr) suts in
-      if List.length vb > 0 then pexp_let Nonrecursive vb body else body
+      List.fold_right
+        (fun sut acc ->
+          let expr = eapply (qualify [ "SUT" ] "pop") [ evar sut_name ] in
+          let vb = value_binding ~pat:(pvar sut) ~expr in
+          pexp_let Nonrecursive [ vb ] acc)
+        suts body
+      (* let expr = eapply (qualify [ "SUT" ] "pop") [ evar sut_name ] in
+         let vb = List.map (fun sut -> value_binding ~pat:(pvar sut) ~expr) suts in
+         if List.length vb > 0 then pexp_let Nonrecursive vb body else body *)
     in
     let pushes =
       List.map
@@ -337,10 +344,14 @@ let run_case config sut_name value =
     in
     let tail = List.fold_right pexp_sequence pushes (evar call_res) in
     let wrapped_call =
-      pexp_let Nonrecursive
-        [ value_binding ~pat:(pvar call_res) ~expr:call ]
-        tail
-      |> pops
+      pexp_sequence
+        (eapply
+           (qualify [ "SUT" ] "adjust")
+           [ evar sut_name; eint (List.length value.sut_vars) ])
+        (pexp_let Nonrecursive
+           [ value_binding ~pat:(pvar call_res) ~expr:call ]
+           tail
+        |> pops)
     in
     let args = Some (pexp_tuple [ ty_show; wrapped_call ]) in
     pexp_construct res args |> ok
@@ -357,92 +368,128 @@ let run config ir =
   let expr = efun [ (Nolabel, pvar cmd_name); (Nolabel, pvar sut_name) ] body in
   pstr_value Nonrecursive [ value_binding ~pat ~expr ] |> ok
 
+let pop_states state_ident value =
+  List.mapi
+    (fun idx sut ->
+      let tmp_var = gen_symbol ~prefix:(str_of_ident sut) () in
+      let tmp_id = Ident.create ~loc:Location.none tmp_var in
+      let tmp_pat = pvar tmp_var in
+      let tmp_expr =
+        eapply
+          (qualify [ "Model" ] "get")
+          [
+            evar (str_of_ident state_ident);
+            pexp_constant (Pconst_integer (string_of_int idx, None));
+          ]
+      in
+      (value_binding ~pat:tmp_pat ~expr:tmp_expr, (sut, tmp_id)))
+    value.sut_vars
+  |> List.split
+
 let next_state_case state config state_ident nb_models value =
   let state_var = str_of_ident state_ident |> evar in
   let lhs = mk_cmd_pattern value in
   let open Reserr in
   let* idx, rhs =
-    let vbs, sut_map =
-      match value.sut_var with
-      | Some _ ->
-          let tmp_var = gen_symbol ~prefix:"tmp" () in
-          let tmp_id = Ident.create ~loc:Location.none tmp_var in
-          let tmp_pat = pvar tmp_var in
-          let tmp_expr =
-            eapply
-              (qualify [ "Model" ] "get")
-              [
-                evar (str_of_ident state_ident);
-                pexp_constant (Pconst_integer ("0", None));
-              ]
+    if List.length value.sut_vars = 0 then
+      ([], state_ident |> str_of_ident |> evar) |> ok
+    else
+      let vbs, sut_map = pop_states state_ident value in
+      let wrap e =
+        let state_var = str_of_ident state_ident in
+        [%expr
+          let [%p pvar (str_of_ident state_ident)] =
+            Model.adjust [%e evar state_var]
+              [%e eint (List.length value.sut_vars)]
           in
-          ([ value_binding ~pat:tmp_pat ~expr:tmp_expr ], tmp_id)
-      | None -> ([], state_ident)
-    in
-    let wrap e =
-      if List.length vbs >= 1 then pexp_let Nonrecursive vbs e else e
-    in
-    (* substitute state variable when under `old` operator and translate description into ocaml *)
-    let descriptions =
-      List.filter_map
-        (fun (i, { model; description }) ->
-          (match value.sut_var with
-          | Some sut_var ->
-              subst_term ~out_of_scope:value.ret state ~gos_t:sut_var
-                ~old_t:(Some sut_map) ~new_t:None description
-              >>= ocaml_of_term config
-          | None -> ocaml_of_term config description)
-          |> to_option
-          |> Option.map (fun description -> (i, model, description)))
-        value.next_state.formulae
-    in
-    (* choose one and only one description per modified model *)
-    let pick id =
-      List.find_opt (fun (_, m, _) -> Ident.equal id m) descriptions
-    in
-    let* descriptions =
-      map
-        (fun (id, loc) ->
-          of_option
-            ~default:
-              ( Ensures_not_found_for_next_state
-                  (value.id.id_str, id.Ident.id_str),
-                loc )
-            (pick id))
-        value.next_state.modifies
-    in
-    (* [idx], like [descriptions], is in the order of the modifies clauses *)
-    let idx = List.map (fun (i, _, _) -> i) descriptions in
-    match
-      List.map (fun (_, m, e) -> (lident (str_of_ident m), e)) descriptions
-    with
-    | [] -> ok (idx, state_var)
-    | fields -> (
-        let new_state =
-          eapply
-            (qualify [ "Model" ] "push")
-            [
-              eapply
-                (qualify [ "Model" ] "drop_n")
-                [
-                  evar (state_ident |> str_of_ident);
-                  pexp_constant (Pconst_integer ("1", None));
-                ];
-              pexp_record fields
-                (if List.length fields = nb_models then None
-                 else Some (evar (str_of_ident sut_map)));
-            ]
-        in
-        let translate_checks = translate_checks config state value sut_map in
-        let* checks = map translate_checks value.postcond.checks in
-        match checks with
-        | [] -> ok (idx, wrap new_state)
-        | _ ->
-            ok
-              ( idx,
-                wrap
-                  (pexp_ifthenelse (list_and checks) new_state (Some state_var))
-              ))
+          [%e if List.length vbs >= 1 then pexp_let Nonrecursive vbs e else e]]
+      in
+      let* next_states =
+        map
+          (fun (sut, next_state) ->
+            (* substitute state variable when under `old` operator and translate description into ocaml *)
+            let descriptions =
+              List.filter_map
+                (fun (i, { model; description }) ->
+                  subst_term ~out_of_scope:value.ret state ~gos_t:value.sut_vars
+                    ~old_t:sut_map ~new_t:[] description
+                  >>= ocaml_of_term config
+                  |> to_option
+                  |> Option.map (fun description -> (i, model, description)))
+                next_state.formulae
+            in
+            (* choose one and only one description per modified model *)
+            let pick id =
+              List.find_opt (fun (_, m, _) -> Ident.equal id m) descriptions
+            in
+            let* descriptions =
+              map
+                (fun (id, loc) ->
+                  of_option
+                    ~default:
+                      ( Ensures_not_found_for_next_state
+                          (value.id.id_str, id.Ident.id_str),
+                        loc )
+                    (pick id))
+                next_state.modifies
+            in
+            (* [idx], like [descriptions], is in the order of the modifies clauses *)
+            let idx = List.map (fun (i, _, _) -> i) descriptions in
+            match
+              List.map
+                (fun (_, m, e) -> (lident (str_of_ident m), e))
+                descriptions
+            with
+            | [] -> ok (idx, sut, List.assoc sut sut_map |> str_of_ident |> evar)
+            | fields ->
+                ok
+                  ( idx,
+                    sut,
+                    [%expr
+                      let open ModelElt in
+                      [%e
+                        pexp_record fields
+                          (if List.length fields = nb_models then None
+                           else
+                             Some
+                               (evar (List.assoc sut sut_map |> str_of_ident)))]]
+                  ))
+          value.next_states
+      in
+      let vbs_next_states, next_state_vars =
+        List.map
+          (fun (_, sut, expr) ->
+            let next_state_var = gen_symbol ~prefix:(str_of_ident sut) () in
+            let pat = pvar next_state_var in
+            (value_binding ~pat ~expr, next_state_var))
+          next_states
+        |> List.split
+      in
+      let push_expr =
+        List.fold_left
+          (fun body next_var ->
+            eapply (qualify [ "Model" ] "push") [ body; evar next_var ])
+          (eapply
+             (qualify [ "Model" ] "drop_n")
+             [
+               evar (str_of_ident state_ident);
+               pexp_constant
+                 (Pconst_integer (List.length sut_map |> string_of_int, None));
+             ])
+          (List.rev next_state_vars)
+      in
+      let new_state = pexp_let Nonrecursive vbs_next_states push_expr in
+      let idx = List.fold_left (fun acc (i, _, _) -> i @ acc) [] next_states in
+      let translate_checks = translate_checks config state value sut_map in
+      let* checks = map translate_checks value.postcond.checks in
+      match checks with
+      | [] -> ok (idx, wrap new_state)
+      | _ ->
+          ok
+            ( idx,
+              wrap
+                (pexp_ifthenelse (list_and checks) new_state (Some state_var))
+            )
   in
   (idx, case ~lhs ~guard:None ~rhs) |> ok
 
@@ -471,16 +518,24 @@ let precond_case config state state_ident value =
   let lhs = mk_cmd_pattern value in
   let open Reserr in
   let* rhs =
+    let vbs, sut_map = pop_states state_ident value in
+    let wrap e =
+      let state_var = state_ident |> str_of_ident in
+      [%expr
+        let [%p pvar state_var] =
+          Model.adjust [%e evar state_var]
+            [%e eint (List.length value.sut_vars)]
+        in
+        [%e if List.length vbs >= 1 then pexp_let Nonrecursive vbs e else e]]
+      |> ok
+    in
     list_and
     <$> map
           (fun t ->
-            match value.sut_var with
-            | Some sut_var ->
-                subst_term state ~gos_t:sut_var ~old_t:None
-                  ~new_t:(Some state_ident) t
-                >>= ocaml_of_term config
-            | None -> ocaml_of_term config t)
+            subst_term state ~gos_t:value.sut_vars ~old_t:[] ~new_t:sut_map t
+            >>= ocaml_of_term config)
           value.precond
+    >>= wrap
   in
   ok (case ~lhs ~guard:None ~rhs)
 
@@ -530,47 +585,61 @@ let postcond_case config state invariants idx state_ident new_state_ident value
     =
   let open Reserr in
   let translate_postcond t =
-    match value.sut_var with
-    | Some sut_var ->
-        let aux old state_id sut_var =
-          let vbs, name_map =
-            let id = sut_var.Ident.id_str in
-            let suffix = if old then "_old" else "_new" in
-            let var = gen_symbol ~prefix:(id ^ suffix) () in
-            let pat = pvar var in
-            let expr =
-              if old then
-                [%expr lazy (Model.get [%e evar state_id.Ident.id_str] 0)]
-              else
-                [%expr
-                  lazy
-                    (Model.get (Lazy.force [%e evar state_id.Ident.id_str]) 0)]
-            in
-            ([ value_binding ~pat ~expr ], Ident.create ~loc:Location.none var)
-          in
-          ((fun body -> pexp_let Nonrecursive vbs body), Some name_map)
+    let vbs, sut_map_old, sut_map_new =
+      let aux (acc_vbs, acc_old, acc_new) sut_var =
+        let id = sut_var.Ident.id_str in
+        let var_old = gen_symbol ~prefix:(id ^ "_old") () in
+        let var_new = gen_symbol ~prefix:(id ^ "_new") () in
+        let pat_old = pvar var_old in
+        let pat_new = pvar var_new in
+        let idx = List.length acc_old in
+        let expr_old =
+          [%expr Model.get [%e evar state_ident.Ident.id_str] [%e eint idx]]
         in
-        let old_let, old_t = aux true state_ident sut_var in
-        let new_let, new_t = aux false new_state_ident sut_var in
-        let* subst_term =
-          subst_term state ~gos_t:sut_var ~old_lz:true ~old_t ~new_lz:true
-            ~new_t t.term
+        let expr_new =
+          [%expr
+            lazy
+              (Model.get
+                 (Lazy.force [%e evar new_state_ident.Ident.id_str])
+                 [%e eint idx])]
         in
-        let* ocaml_term = ocaml_of_term config subst_term in
-        ocaml_term |> old_let |> new_let |> ok
-    | None -> ocaml_of_term config t.term
-  and translate_invariants id t =
-    let tmp = gen_symbol ~prefix:id.Ident.id_str () in
-    let pat = pvar tmp in
-    let expr =
-      [%expr
-        lazy (Model.get (Lazy.force [%e evar new_state_ident.Ident.id_str]) 0)]
+        ( value_binding ~pat:pat_old ~expr:expr_old
+          :: value_binding ~pat:pat_new ~expr:expr_new
+          :: acc_vbs,
+          (sut_var, Ident.create ~loc:Location.none var_old) :: acc_old,
+          (sut_var, Ident.create ~loc:Location.none var_new) :: acc_new )
+      in
+      List.fold_left aux ([], [], []) value.sut_vars
     in
-    let wrap = pexp_let Nonrecursive [ value_binding ~pat ~expr ] in
+    let wrap e =
+      (if List.length vbs >= 1 then pexp_let Nonrecursive vbs e else e) |> ok
+    in
+    subst_term state ~gos_t:value.sut_vars ~old_lz:false ~old_t:sut_map_old
+      ~new_lz:true ~new_t:sut_map_new t.term
+    >>= ocaml_of_term config
+    >>= wrap
+  and translate_invariants id t =
+    let vbs, sut_map =
+      List.mapi
+        (fun idx sut_var ->
+          let tmp = gen_symbol ~prefix:id.Ident.id_str () in
+          let pat = pvar tmp in
+          let expr =
+            [%expr
+              lazy
+                (Model.get
+                   (Lazy.force [%e evar new_state_ident.Ident.id_str])
+                   [%e eint idx])]
+          in
+          ( value_binding ~pat ~expr,
+            (sut_var, Ident.create ~loc:Location.none tmp) ))
+        value.sut_vars
+      |> List.split
+    in
+    let wrap = pexp_let Nonrecursive vbs in
     let* subst_term =
-      subst_term state ~gos_t:id ~old_t:None
-        ~new_t:(Some (Ident.create ~loc:Location.none tmp))
-        ~new_lz:true t.term
+      subst_term state ~gos_t:[ id ] ~old_t:[] ~new_t:sut_map ~new_lz:true
+        t.term
     in
     let* ocaml_term = ocaml_of_term config subst_term in
     ocaml_term |> wrap |> ok
@@ -706,9 +775,9 @@ let postcond_case config state invariants idx state_ident new_state_ident value
   in
   let* rhs =
     let translate_checks =
-      match value.sut_var with
-      | Some _ ->
-          let vbs, sut_map =
+      let vbs, sut_map =
+        List.mapi
+          (fun idx sut ->
             let tmp_var = gen_symbol ~prefix:"tmp" () in
             let tmp_id = Ident.create ~loc:Location.none tmp_var in
             let tmp_pat = pvar tmp_var in
@@ -717,14 +786,17 @@ let postcond_case config state invariants idx state_ident new_state_ident value
                 (qualify [ "Model" ] "get")
                 [
                   evar (str_of_ident state_ident);
-                  pexp_constant (Pconst_integer ("0", None));
+                  pexp_constant (Pconst_integer (string_of_int idx, None));
                 ]
             in
-            ([ value_binding ~pat:tmp_pat ~expr:tmp_expr ], tmp_id)
-          in
-          let wrap e = pexp_let Nonrecursive vbs e in
-          fun t -> wrap <$> translate_checks config state value sut_map t
-      | None -> translate_checks config state value new_state_ident
+            (value_binding ~pat:tmp_pat ~expr:tmp_expr, (sut, tmp_id)))
+          value.sut_vars
+        |> List.split
+      in
+      let wrap e =
+        if List.length vbs >= 1 then pexp_let Nonrecursive vbs e else e
+      in
+      fun t -> wrap <$> translate_checks config state value sut_map t
     in
     let* checks =
       map
@@ -732,8 +804,17 @@ let postcond_case config state invariants idx state_ident new_state_ident value
           wrap_check ~exn:(Some "Invalid_argument") t <$> translate_checks t)
         value.postcond.checks
     in
+    let wrap e =
+      let state_var = str_of_ident state_ident in
+      [%expr
+        let [%p pvar state_var] =
+          Model.adjust [%e evar state_var]
+            [%e eint (List.length value.sut_vars)]
+        in
+        [%e e]]
+    in
     match checks with
-    | [] -> ok rhs
+    | [] -> rhs |> wrap |> ok
     | _ ->
         let inv_arg =
           ppat_construct (lident "Invalid_argument") (Some ppat_any)
@@ -752,6 +833,7 @@ let postcond_case config state invariants idx state_ident new_state_ident value
             case ~lhs:(ppat_construct (lident "None") None) ~guard:None ~rhs;
             case ~lhs:ppat_any ~guard:None ~rhs:validate_inv_arg;
           ]
+        |> wrap
         |> ok
   in
   ok (case ~lhs ~guard:None ~rhs)
@@ -939,8 +1021,9 @@ let init_state config ir =
   let open Reserr in
   let translate_field_desc Ir.{ model; description } =
     let* desc =
-      subst_term ir.state ~gos_t:ir.init_state.returned_sut ~old_t:None
-        ~new_t:None description
+      subst_term ir.state
+        ~gos_t:[ ir.init_state.returned_sut ]
+        ~old_t:[] ~new_t:[] description
       >>= ocaml_of_term config
     in
     ok (model, desc)
@@ -999,7 +1082,9 @@ let check_init_state config ir =
   and state_id = Ident.create ~loc:Location.none state_name in
   let translate_invariants id t =
     enot
-    <$> (subst_term ir.state ~gos_t:id ~old_t:None ~new_t:(Some state_id) t.term
+    <$> (subst_term ir.state ~gos_t:[ id ] ~old_t:[]
+           ~new_t:[ (id, state_id) ]
+           t.term
         >>= ocaml_of_term config)
   and msg =
     let f = qualify [ "QCheck"; "Test" ] "fail_report"

@@ -70,53 +70,61 @@ module Spec =
     let next_state cmd__002_ state__003_ =
       match cmd__002_ with
       | Add (a_1, b_1) ->
-          let tmp__004_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              m =
-                (try fun x -> if x = a_1 then Some b_1 else tmp__004_.m x
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "functional_model.mli";
-                                  pos_lnum = 11;
-                                  pos_bol = 482;
-                                  pos_cnum = 500
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "functional_model.mli";
-                                  pos_lnum = 11;
-                                  pos_bol = 482;
-                                  pos_cnum = 546
-                                }
-                            })))
-            }
-    let precond cmd__010_ state__011_ =
-      match cmd__010_ with | Add (a_1, b_1) -> true
+          let state__003_ = Model.adjust state__003_ 1 in
+          let t_1__004_ = Model.get state__003_ 0 in
+          let t_1__005_ =
+            let open ModelElt in
+              {
+                m =
+                  (try fun x -> if x = a_1 then Some b_1 else t_1__004_.m x
+                   with
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "functional_model.mli";
+                                    pos_lnum = 11;
+                                    pos_bol = 482;
+                                    pos_cnum = 500
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "functional_model.mli";
+                                    pos_lnum = 11;
+                                    pos_bol = 482;
+                                    pos_cnum = 546
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) t_1__005_
+    let precond cmd__011_ state__012_ =
+      match cmd__011_ with
+      | Add (a_1, b_1) ->
+          let state__012_ = Model.adjust state__012_ 1 in
+          let t_1__013_ = Model.get state__012_ 0 in true
     let postcond _ _ _ = true
-    let run cmd__012_ sut__013_ =
-      match cmd__012_ with
+    let run cmd__014_ sut__015_ =
+      match cmd__014_ with
       | Add (a_1, b_1) ->
           Res
             (unit,
-              (let tmp__014_ = SUT.pop sut__013_ in
-               let res__015_ = add tmp__014_ a_1 b_1 in
-               (SUT.push tmp__014_ sut__013_; res__015_)))
+              ((SUT.adjust sut__015_ 1;
+                (let t_1__016_ = SUT.pop sut__015_ in
+                 let res__017_ = add t_1__016_ a_1 b_1 in
+                 SUT.push t_1__016_ sut__015_; res__017_))))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
-let ortac_postcond cmd__005_ state__006_ res__007_ =
+let ortac_postcond cmd__006_ state__007_ res__008_ =
   let open Spec in
     let open STM in
-      let new_state__008_ = lazy (next_state cmd__005_ state__006_) in
-      match (cmd__005_, res__007_) with
-      | (Add (a_1, b_1), Res ((Unit, _), _)) -> None
+      let new_state__009_ = lazy (next_state cmd__006_ state__007_) in
+      match (cmd__006_, res__008_) with
+      | (Add (a_1, b_1), Res ((Unit, _), _)) ->
+          let state__007_ = Model.adjust state__007_ 1 in None
       | _ -> None
 let _ =
   QCheck_base_runner.run_tests_main

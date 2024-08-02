@@ -1,5 +1,0 @@
-File "queue.mli", line 36, characters 15-35:
-36 | val transfer : 'a t -> 'a t -> unit
-                    ^^^^^^^^^^^^^^^^^^^^
-Warning: Skipping transfer: functions with multiple SUT arguments cannot be
-         tested.

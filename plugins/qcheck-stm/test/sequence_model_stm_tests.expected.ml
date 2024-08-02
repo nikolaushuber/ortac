@@ -94,143 +94,167 @@ module Spec =
     let next_state cmd__002_ state__003_ =
       match cmd__002_ with
       | Add v ->
-          let tmp__004_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              contents =
-                (try
-                   Ortac_runtime.Gospelstdlib.Sequence.cons v
-                     tmp__004_.contents
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "sequence_model.mli";
-                                  pos_lnum = 11;
-                                  pos_bol = 475;
-                                  pos_cnum = 500
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "sequence_model.mli";
-                                  pos_lnum = 11;
-                                  pos_bol = 475;
-                                  pos_cnum = 532
-                                }
-                            })))
-            }
-      | Remove ->
-          let tmp__005_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              contents =
-                (try
-                   match Ortac_runtime.Gospelstdlib.Sequence.length
-                           tmp__005_.contents
+          let state__003_ = Model.adjust state__003_ 1 in
+          let t_1__004_ = Model.get state__003_ 0 in
+          let t_1__005_ =
+            let open ModelElt in
+              {
+                contents =
+                  (try
+                     Ortac_runtime.Gospelstdlib.Sequence.cons v
+                       t_1__004_.contents
                    with
-                   | __x__006_ when
-                       (=) __x__006_
-                         (Ortac_runtime.Gospelstdlib.integer_of_int 0)
-                       -> Ortac_runtime.Gospelstdlib.Sequence.empty
-                   | _ ->
-                       Ortac_runtime.Gospelstdlib.Sequence.tl
-                         tmp__005_.contents
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "sequence_model.mli";
-                                  pos_lnum = 20;
-                                  pos_bol = 953;
-                                  pos_cnum = 978
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "sequence_model.mli";
-                                  pos_lnum = 22;
-                                  pos_bol = 1070;
-                                  pos_cnum = 1131
-                                }
-                            })))
-            }
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "sequence_model.mli";
+                                    pos_lnum = 11;
+                                    pos_bol = 475;
+                                    pos_cnum = 500
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "sequence_model.mli";
+                                    pos_lnum = 11;
+                                    pos_bol = 475;
+                                    pos_cnum = 532
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) t_1__005_
+      | Remove ->
+          let state__003_ = Model.adjust state__003_ 1 in
+          let t_2__006_ = Model.get state__003_ 0 in
+          let t_2__008_ =
+            let open ModelElt in
+              {
+                contents =
+                  (try
+                     match Ortac_runtime.Gospelstdlib.Sequence.length
+                             t_2__006_.contents
+                     with
+                     | __x__007_ when
+                         (=) __x__007_
+                           (Ortac_runtime.Gospelstdlib.integer_of_int 0)
+                         -> Ortac_runtime.Gospelstdlib.Sequence.empty
+                     | _ ->
+                         Ortac_runtime.Gospelstdlib.Sequence.tl
+                           t_2__006_.contents
+                   with
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "sequence_model.mli";
+                                    pos_lnum = 20;
+                                    pos_bol = 953;
+                                    pos_cnum = 978
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "sequence_model.mli";
+                                    pos_lnum = 22;
+                                    pos_bol = 1070;
+                                    pos_cnum = 1131
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) t_2__008_
       | Remove_ ->
-          let tmp__007_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              contents =
-                (try
-                   match length_opt tmp__007_.contents with
-                   | Some __x__008_ when
-                       (=) __x__008_
-                         (Ortac_runtime.Gospelstdlib.integer_of_int 0)
-                       -> Ortac_runtime.Gospelstdlib.Sequence.empty
-                   | _ ->
-                       Ortac_runtime.Gospelstdlib.Sequence.tl
-                         tmp__007_.contents
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "sequence_model.mli";
-                                  pos_lnum = 27;
-                                  pos_bol = 1337;
-                                  pos_cnum = 1362
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "sequence_model.mli";
-                                  pos_lnum = 29;
-                                  pos_bol = 1454;
-                                  pos_cnum = 1515
-                                }
-                            })))
-            }
-    let precond cmd__016_ state__017_ =
-      match cmd__016_ with | Add v -> true | Remove -> true | Remove_ -> true
+          let state__003_ = Model.adjust state__003_ 1 in
+          let t_3__009_ = Model.get state__003_ 0 in
+          let t_3__011_ =
+            let open ModelElt in
+              {
+                contents =
+                  (try
+                     match length_opt t_3__009_.contents with
+                     | Some __x__010_ when
+                         (=) __x__010_
+                           (Ortac_runtime.Gospelstdlib.integer_of_int 0)
+                         -> Ortac_runtime.Gospelstdlib.Sequence.empty
+                     | _ ->
+                         Ortac_runtime.Gospelstdlib.Sequence.tl
+                           t_3__009_.contents
+                   with
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "sequence_model.mli";
+                                    pos_lnum = 27;
+                                    pos_bol = 1337;
+                                    pos_cnum = 1362
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "sequence_model.mli";
+                                    pos_lnum = 29;
+                                    pos_bol = 1454;
+                                    pos_cnum = 1515
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) t_3__011_
+    let precond cmd__019_ state__020_ =
+      match cmd__019_ with
+      | Add v ->
+          let state__020_ = Model.adjust state__020_ 1 in
+          let t_1__021_ = Model.get state__020_ 0 in true
+      | Remove ->
+          let state__020_ = Model.adjust state__020_ 1 in
+          let t_2__022_ = Model.get state__020_ 0 in true
+      | Remove_ ->
+          let state__020_ = Model.adjust state__020_ 1 in
+          let t_3__023_ = Model.get state__020_ 0 in true
     let postcond _ _ _ = true
-    let run cmd__018_ sut__019_ =
-      match cmd__018_ with
+    let run cmd__024_ sut__025_ =
+      match cmd__024_ with
       | Add v ->
           Res
             (unit,
-              (let tmp__020_ = SUT.pop sut__019_ in
-               let res__021_ = add v tmp__020_ in
-               (SUT.push tmp__020_ sut__019_; res__021_)))
+              ((SUT.adjust sut__025_ 1;
+                (let t_1__026_ = SUT.pop sut__025_ in
+                 let res__027_ = add v t_1__026_ in
+                 SUT.push t_1__026_ sut__025_; res__027_))))
       | Remove ->
           Res
             ((option char),
-              (let tmp__022_ = SUT.pop sut__019_ in
-               let res__023_ = remove tmp__022_ in
-               (SUT.push tmp__022_ sut__019_; res__023_)))
+              ((SUT.adjust sut__025_ 1;
+                (let t_2__028_ = SUT.pop sut__025_ in
+                 let res__029_ = remove t_2__028_ in
+                 SUT.push t_2__028_ sut__025_; res__029_))))
       | Remove_ ->
           Res
             ((option char),
-              (let tmp__024_ = SUT.pop sut__019_ in
-               let res__025_ = remove_ tmp__024_ in
-               (SUT.push tmp__024_ sut__019_; res__025_)))
+              ((SUT.adjust sut__025_ 1;
+                (let t_3__030_ = SUT.pop sut__025_ in
+                 let res__031_ = remove_ t_3__030_ in
+                 SUT.push t_3__030_ sut__025_; res__031_))))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
-let ortac_postcond cmd__009_ state__010_ res__011_ =
+let ortac_postcond cmd__012_ state__013_ res__014_ =
   let open Spec in
     let open STM in
-      let new_state__012_ = lazy (next_state cmd__009_ state__010_) in
-      match (cmd__009_, res__011_) with
-      | (Add v, Res ((Unit, _), _)) -> None
-      | (Remove, Res ((Option (Char), _), o)) -> None
-      | (Remove_, Res ((Option (Char), _), o_1)) -> None
+      let new_state__015_ = lazy (next_state cmd__012_ state__013_) in
+      match (cmd__012_, res__014_) with
+      | (Add v, Res ((Unit, _), _)) ->
+          let state__013_ = Model.adjust state__013_ 1 in None
+      | (Remove, Res ((Option (Char), _), o)) ->
+          let state__013_ = Model.adjust state__013_ 1 in None
+      | (Remove_, Res ((Option (Char), _), o_1)) ->
+          let state__013_ = Model.adjust state__013_ 1 in None
       | _ -> None
 let _ =
   QCheck_base_runner.run_tests_main

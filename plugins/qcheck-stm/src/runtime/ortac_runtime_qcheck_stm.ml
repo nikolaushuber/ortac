@@ -40,6 +40,7 @@ module Model = struct
     val drop_n : t -> int -> t
     val push : t -> elt -> t
     val get : t -> int -> elt
+    val adjust : t -> int -> t
   end
   with type elt := M.elt = struct
     type elt = M.elt
@@ -49,7 +50,17 @@ module Model = struct
     let size = List.length
     let drop_n t n = List.filteri (fun idx _ -> idx >= n) t
     let push t e = e :: t
-    let get = List.nth
+
+    let get t n =
+      try List.nth t n with _ -> failwith ("nth: " ^ string_of_int n)
+
+    let adjust t n =
+      let extra_elems =
+        if List.length t < n then
+          List.init (n - List.length t) (fun _ -> Option.get M.init)
+        else []
+      in
+      extra_elems @ t
   end
 end
 
@@ -77,6 +88,14 @@ module SUT = struct
     let size : t -> int = Stack.length
     let pop : t -> elt = Stack.pop
     let push : elt -> t -> unit = Stack.push
+
+    let adjust t n =
+      let extra_elems =
+        if Stack.length t < n then
+          List.init (n - Stack.length t) (fun _ -> (Option.get M.init) ())
+        else []
+      in
+      List.iter (fun e -> Stack.push e t) extra_elems
   end
 end
 

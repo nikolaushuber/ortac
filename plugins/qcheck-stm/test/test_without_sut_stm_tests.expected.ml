@@ -79,11 +79,16 @@ module Spec =
     let next_state cmd__002_ state__003_ =
       match cmd__002_ with | Add (a_1, b) -> state__003_
     let precond cmd__008_ state__009_ =
-      match cmd__008_ with | Add (a_1, b) -> true
+      match cmd__008_ with
+      | Add (a_1, b) -> let state__009_ = Model.adjust state__009_ 0 in true
     let postcond _ _ _ = true
     let run cmd__010_ sut__011_ =
       match cmd__010_ with
-      | Add (a_1, b) -> Res (int, (let res__012_ = add a_1 b in res__012_))
+      | Add (a_1, b) ->
+          Res
+            (int,
+              ((SUT.adjust sut__011_ 0;
+                (let res__012_ = add a_1 b in res__012_))))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
@@ -93,6 +98,7 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
       let new_state__007_ = lazy (next_state cmd__004_ state__005_) in
       match (cmd__004_, res__006_) with
       | (Add (a_1, b), Res ((Int, _), c)) ->
+          let state__005_ = Model.adjust state__005_ 0 in
           if
             (try
                (Ortac_runtime.Gospelstdlib.integer_of_int c) =
