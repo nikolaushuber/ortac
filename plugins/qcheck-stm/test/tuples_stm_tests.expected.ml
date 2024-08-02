@@ -6,40 +6,40 @@ module Ortac_runtime = Ortac_runtime_qcheck_stm
 module SUT =
   (Ortac_runtime.SUT.Make)(struct
                              type sut = (char, int) t
-                             let init = Some (fun () -> create ())
+                             let init () = create ()
                            end)
 module ModelElt =
   struct
     type nonrec elt = {
       contents: (char * int) list }
     let init =
-      Some
-        (let () = () in
-         {
-           contents =
-             (try []
-              with
-              | e ->
-                  raise
-                    (Ortac_runtime.Partial_function
-                       (e,
-                         {
-                           Ortac_runtime.start =
-                             {
-                               pos_fname = "tuples.mli";
-                               pos_lnum = 6;
-                               pos_bol = 251;
-                               pos_cnum = 276
-                             };
-                           Ortac_runtime.stop =
-                             {
-                               pos_fname = "tuples.mli";
-                               pos_lnum = 6;
-                               pos_bol = 251;
-                               pos_cnum = 278
-                             }
-                         })))
-         })
+      let () = () in
+      {
+        contents =
+          (try []
+           with
+           | e ->
+               raise
+                 (Ortac_runtime.Partial_function
+                    (e,
+                      {
+                        Ortac_runtime.start =
+                          {
+                            pos_fname = "tuples.mli";
+                            pos_lnum = 6;
+                            pos_bol = 251;
+                            pos_cnum = 276
+                          };
+                        Ortac_runtime.stop =
+                          {
+                            pos_fname = "tuples.mli";
+                            pos_lnum = 6;
+                            pos_bol = 251;
+                            pos_cnum = 278
+                          }
+                      })))
+      }
+    let max_suts = 1
   end
 module Model = (Ortac_runtime.Model.Make)(ModelElt)
 module Spec =
@@ -66,9 +66,9 @@ module Spec =
            (Util.Pp.pp_tuple3 (Util.Pp.of_show show1) (Util.Pp.of_show show2)
               (Util.Pp.of_show show3))))
     type sut = SUT.t
-    let init_sut = SUT.create
+    let init_sut = SUT.create 1
     type state = Model.t
-    let init_state = Model.create ()
+    let init_state = Model.create 1 ()
     type cmd =
       | Clear 
       | Add of (char * int) 
@@ -78,20 +78,20 @@ module Spec =
       | Size_tup' 
     let show_cmd cmd__001_ =
       match cmd__001_ with
-      | Clear -> Format.asprintf "%s sut" "clear"
+      | Clear -> Format.asprintf "%s <sut>" "clear"
       | Add tup ->
-          Format.asprintf "%s sut %a" "add"
+          Format.asprintf "%s <sut> %a" "add"
             (Util.Pp.pp_tuple2 Util.Pp.pp_char Util.Pp.pp_int true) tup
       | Add' tup_1 ->
-          Format.asprintf "%s sut %a" "add'"
+          Format.asprintf "%s <sut> %a" "add'"
             (Util.Pp.pp_tuple3 Util.Pp.pp_bool Util.Pp.pp_char Util.Pp.pp_int
                true) tup_1
       | Add'' tup_2 ->
-          Format.asprintf "%s sut %a" "add''"
+          Format.asprintf "%s <sut> %a" "add''"
             (Util.Pp.pp_tuple2 Util.Pp.pp_bool
                (Util.Pp.pp_tuple2 Util.Pp.pp_char Util.Pp.pp_int) true) tup_2
-      | Size_tup -> Format.asprintf "%s sut" "size_tup"
-      | Size_tup' -> Format.asprintf "%s sut" "size_tup'"
+      | Size_tup -> Format.asprintf "%s <sut>" "size_tup"
+      | Size_tup' -> Format.asprintf "%s <sut>" "size_tup'"
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -108,186 +108,219 @@ module Spec =
     let next_state cmd__002_ state__003_ =
       match cmd__002_ with
       | Clear ->
-          let tmp__004_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              contents =
-                (try []
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "tuples.mli";
-                                  pos_lnum = 11;
-                                  pos_bol = 416;
-                                  pos_cnum = 441
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "tuples.mli";
-                                  pos_lnum = 11;
-                                  pos_bol = 416;
-                                  pos_cnum = 443
-                                }
-                            })))
-            }
+          let h__004_ = Model.get state__003_ 0 in
+          let h__005_ =
+            let open ModelElt in
+              {
+                contents =
+                  (try []
+                   with
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "tuples.mli";
+                                    pos_lnum = 11;
+                                    pos_bol = 416;
+                                    pos_cnum = 441
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "tuples.mli";
+                                    pos_lnum = 11;
+                                    pos_bol = 416;
+                                    pos_cnum = 443
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) h__005_
       | Add tup ->
-          let tmp__005_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              contents =
-                (try
-                   match tup with
-                   | (a_1, b_1) -> (a_1, b_1) :: tmp__005_.contents
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "tuples.mli";
-                                  pos_lnum = 16;
-                                  pos_bol = 594;
-                                  pos_cnum = 619
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "tuples.mli";
-                                  pos_lnum = 16;
-                                  pos_bol = 594;
-                                  pos_cnum = 666
-                                }
-                            })))
-            }
+          let h_1__006_ = Model.get state__003_ 0 in
+          let h_1__007_ =
+            let open ModelElt in
+              {
+                contents =
+                  (try
+                     match tup with
+                     | (a_1, b_1) -> (a_1, b_1) :: h_1__006_.contents
+                   with
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "tuples.mli";
+                                    pos_lnum = 16;
+                                    pos_bol = 594;
+                                    pos_cnum = 619
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "tuples.mli";
+                                    pos_lnum = 16;
+                                    pos_bol = 594;
+                                    pos_cnum = 666
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) h_1__007_
       | Add' tup_1 ->
-          let tmp__006_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              contents =
-                (try
-                   match tup_1 with
-                   | (c, a_2, b_2) ->
-                       if c = true
-                       then (a_2, b_2) :: tmp__006_.contents
-                       else tmp__006_.contents
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "tuples.mli";
-                                  pos_lnum = 21;
-                                  pos_bol = 871;
-                                  pos_cnum = 896
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "tuples.mli";
-                                  pos_lnum = 23;
-                                  pos_bol = 965;
-                                  pos_cnum = 992
-                                }
-                            })))
-            }
+          let h_2__008_ = Model.get state__003_ 0 in
+          let h_2__009_ =
+            let open ModelElt in
+              {
+                contents =
+                  (try
+                     match tup_1 with
+                     | (c, a_2, b_2) ->
+                         if c = true
+                         then (a_2, b_2) :: h_2__008_.contents
+                         else h_2__008_.contents
+                   with
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "tuples.mli";
+                                    pos_lnum = 21;
+                                    pos_bol = 871;
+                                    pos_cnum = 896
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "tuples.mli";
+                                    pos_lnum = 23;
+                                    pos_bol = 965;
+                                    pos_cnum = 992
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) h_2__009_
       | Add'' tup_2 ->
-          let tmp__007_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              contents =
-                (try
-                   match tup_2 with
-                   | (c_1, (a_3, b_3)) ->
-                       if c_1 = true
-                       then (a_3, b_3) :: tmp__007_.contents
-                       else tmp__007_.contents
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "tuples.mli";
-                                  pos_lnum = 28;
-                                  pos_bol = 1156;
-                                  pos_cnum = 1181
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "tuples.mli";
-                                  pos_lnum = 30;
-                                  pos_bol = 1252;
-                                  pos_cnum = 1279
-                                }
-                            })))
-            }
-      | Size_tup -> state__003_
-      | Size_tup' -> state__003_
-    let precond cmd__030_ state__031_ =
-      match cmd__030_ with
-      | Clear -> true
-      | Add tup -> true
-      | Add' tup_1 -> true
-      | Add'' tup_2 -> true
-      | Size_tup -> true
-      | Size_tup' -> true
+          let h_3__010_ = Model.get state__003_ 0 in
+          let h_3__011_ =
+            let open ModelElt in
+              {
+                contents =
+                  (try
+                     match tup_2 with
+                     | (c_1, (a_3, b_3)) ->
+                         if c_1 = true
+                         then (a_3, b_3) :: h_3__010_.contents
+                         else h_3__010_.contents
+                   with
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "tuples.mli";
+                                    pos_lnum = 28;
+                                    pos_bol = 1156;
+                                    pos_cnum = 1181
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "tuples.mli";
+                                    pos_lnum = 30;
+                                    pos_bol = 1252;
+                                    pos_cnum = 1279
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) h_3__011_
+      | Size_tup ->
+          let t_1__012_ = Model.get state__003_ 0 in
+          let t_1__013_ = t_1__012_ in
+          Model.push (Model.drop_n state__003_ 1) t_1__013_
+      | Size_tup' ->
+          let t_2__014_ = Model.get state__003_ 0 in
+          let t_2__015_ = t_2__014_ in
+          Model.push (Model.drop_n state__003_ 1) t_2__015_
+    let precond cmd__036_ state__037_ =
+      match cmd__036_ with
+      | Clear -> let h__038_ = Model.get state__037_ 0 in true
+      | Add tup -> let h_1__039_ = Model.get state__037_ 0 in true
+      | Add' tup_1 -> let h_2__040_ = Model.get state__037_ 0 in true
+      | Add'' tup_2 -> let h_3__041_ = Model.get state__037_ 0 in true
+      | Size_tup -> let t_1__042_ = Model.get state__037_ 0 in true
+      | Size_tup' -> let t_2__043_ = Model.get state__037_ 0 in true
     let postcond _ _ _ = true
-    let run cmd__032_ sut__033_ =
-      match cmd__032_ with
+    let run cmd__044_ sut__045_ =
+      match cmd__044_ with
       | Clear ->
           Res
             (unit,
-              (let tmp__034_ = SUT.pop sut__033_ in
-               let res__035_ = clear tmp__034_ in
-               (SUT.push tmp__034_ sut__033_; res__035_)))
+              (let h__046_ = SUT.pop sut__045_ in
+               let res__047_ = clear h__046_ in
+               (SUT.push sut__045_ h__046_; res__047_)))
       | Add tup ->
           Res
             (unit,
-              (let tmp__036_ = SUT.pop sut__033_ in
-               let res__037_ = add tmp__036_ tup in
-               (SUT.push tmp__036_ sut__033_; res__037_)))
+              (let h_1__048_ = SUT.pop sut__045_ in
+               let res__049_ = add h_1__048_ tup in
+               (SUT.push sut__045_ h_1__048_; res__049_)))
       | Add' tup_1 ->
           Res
             (unit,
-              (let tmp__038_ = SUT.pop sut__033_ in
-               let res__039_ = add' tmp__038_ tup_1 in
-               (SUT.push tmp__038_ sut__033_; res__039_)))
+              (let h_2__050_ = SUT.pop sut__045_ in
+               let res__051_ = add' h_2__050_ tup_1 in
+               (SUT.push sut__045_ h_2__050_; res__051_)))
       | Add'' tup_2 ->
           Res
             (unit,
-              (let tmp__040_ = SUT.pop sut__033_ in
-               let res__041_ = add'' tmp__040_ tup_2 in
-               (SUT.push tmp__040_ sut__033_; res__041_)))
+              (let h_3__052_ = SUT.pop sut__045_ in
+               let res__053_ = add'' h_3__052_ tup_2 in
+               (SUT.push sut__045_ h_3__052_; res__053_)))
       | Size_tup ->
           Res
             ((tup2 int int),
-              (let tmp__042_ = SUT.pop sut__033_ in
-               let res__043_ = size_tup tmp__042_ in
-               (SUT.push tmp__042_ sut__033_; res__043_)))
+              (let t_1__054_ = SUT.pop sut__045_ in
+               let res__055_ = size_tup t_1__054_ in
+               (SUT.push sut__045_ t_1__054_; res__055_)))
       | Size_tup' ->
           Res
             ((tup3 int int int),
-              (let tmp__044_ = SUT.pop sut__033_ in
-               let res__045_ = size_tup' tmp__044_ in
-               (SUT.push tmp__044_ sut__033_; res__045_)))
+              (let t_2__056_ = SUT.pop sut__045_ in
+               let res__057_ = size_tup' t_2__056_ in
+               (SUT.push sut__045_ t_2__056_; res__057_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
-let ortac_postcond cmd__010_ state__011_ res__012_ =
+let ortac_show_cmd cmd__059_ state__060_ =
+  let open Spec in
+    match cmd__059_ with
+    | Clear -> Format.asprintf "%s %s" "clear" (SUT.get_name state__060_ 0)
+    | Add tup ->
+        Format.asprintf "%s %s %a" "add" (SUT.get_name state__060_ 0)
+          (Util.Pp.pp_tuple2 Util.Pp.pp_char Util.Pp.pp_int true) tup
+    | Add' tup_1 ->
+        Format.asprintf "%s %s %a" "add'" (SUT.get_name state__060_ 0)
+          (Util.Pp.pp_tuple3 Util.Pp.pp_bool Util.Pp.pp_char Util.Pp.pp_int
+             true) tup_1
+    | Add'' tup_2 ->
+        Format.asprintf "%s %s %a" "add''" (SUT.get_name state__060_ 0)
+          (Util.Pp.pp_tuple2 Util.Pp.pp_bool
+             (Util.Pp.pp_tuple2 Util.Pp.pp_char Util.Pp.pp_int) true) tup_2
+    | Size_tup ->
+        Format.asprintf "%s %s" "size_tup" (SUT.get_name state__060_ 0)
+    | Size_tup' ->
+        Format.asprintf "%s %s" "size_tup'" (SUT.get_name state__060_ 0)
+let ortac_postcond cmd__016_ state__017_ res__018_ =
   let open Spec in
     let open STM in
-      let new_state__013_ = lazy (next_state cmd__010_ state__011_) in
-      match (cmd__010_, res__012_) with
+      let new_state__019_ = lazy (next_state cmd__016_ state__017_) in
+      match (cmd__016_, res__018_) with
       | (Clear, Res ((Unit, _), _)) -> None
       | (Add tup, Res ((Unit, _), _)) -> None
       | (Add' tup_1, Res ((Unit, _), _)) -> None
@@ -295,13 +328,13 @@ let ortac_postcond cmd__010_ state__011_ res__012_ =
       | (Size_tup, Res ((Tup2 (Int, Int), _), (x, y))) ->
           Ortac_runtime.append
             (if
-               let t_new__019_ =
-                 lazy (Model.get (Lazy.force new_state__013_) 0) in
-               let t_old__018_ = lazy (Model.get state__011_ 0) in
+               let t_old__024_ = Model.get state__017_ 0
+               and t_new__025_ =
+                 lazy (Model.get (Lazy.force new_state__019_) 0) in
                try
                  (Ortac_runtime.Gospelstdlib.integer_of_int x) =
                    (Ortac_runtime.Gospelstdlib.List.length
-                      (Lazy.force t_new__019_).contents)
+                      (Lazy.force t_new__025_).contents)
                with
                | e ->
                    raise
@@ -346,13 +379,13 @@ let ortac_postcond cmd__010_ state__011_ res__012_ =
                            }
                        })]))
             (if
-               let t_new__021_ =
-                 lazy (Model.get (Lazy.force new_state__013_) 0) in
-               let t_old__020_ = lazy (Model.get state__011_ 0) in
+               let t_old__026_ = Model.get state__017_ 0
+               and t_new__027_ =
+                 lazy (Model.get (Lazy.force new_state__019_) 0) in
                try
                  (Ortac_runtime.Gospelstdlib.integer_of_int y) =
                    (Ortac_runtime.Gospelstdlib.List.length
-                      (Lazy.force t_new__021_).contents)
+                      (Lazy.force t_new__027_).contents)
                with
                | e ->
                    raise
@@ -399,13 +432,13 @@ let ortac_postcond cmd__010_ state__011_ res__012_ =
       | (Size_tup', Res ((Tup3 (Int, Int, Int), _), (x_1, y_1, z))) ->
           Ortac_runtime.append
             (if
-               let t_new__024_ =
-                 lazy (Model.get (Lazy.force new_state__013_) 0) in
-               let t_old__023_ = lazy (Model.get state__011_ 0) in
+               let t_old__029_ = Model.get state__017_ 0
+               and t_new__030_ =
+                 lazy (Model.get (Lazy.force new_state__019_) 0) in
                try
                  (Ortac_runtime.Gospelstdlib.integer_of_int x_1) =
                    (Ortac_runtime.Gospelstdlib.List.length
-                      (Lazy.force t_new__024_).contents)
+                      (Lazy.force t_new__030_).contents)
                with
                | e ->
                    raise
@@ -452,13 +485,13 @@ let ortac_postcond cmd__010_ state__011_ res__012_ =
                        })]))
             (Ortac_runtime.append
                (if
-                  let t_new__026_ =
-                    lazy (Model.get (Lazy.force new_state__013_) 0) in
-                  let t_old__025_ = lazy (Model.get state__011_ 0) in
+                  let t_old__031_ = Model.get state__017_ 0
+                  and t_new__032_ =
+                    lazy (Model.get (Lazy.force new_state__019_) 0) in
                   try
                     (Ortac_runtime.Gospelstdlib.integer_of_int y_1) =
                       (Ortac_runtime.Gospelstdlib.List.length
-                         (Lazy.force t_new__026_).contents)
+                         (Lazy.force t_new__032_).contents)
                   with
                   | e ->
                       raise
@@ -504,13 +537,13 @@ let ortac_postcond cmd__010_ state__011_ res__012_ =
                               }
                           })]))
                (if
-                  let t_new__028_ =
-                    lazy (Model.get (Lazy.force new_state__013_) 0) in
-                  let t_old__027_ = lazy (Model.get state__011_ 0) in
+                  let t_old__033_ = Model.get state__017_ 0
+                  and t_new__034_ =
+                    lazy (Model.get (Lazy.force new_state__019_) 0) in
                   try
                     (Ortac_runtime.Gospelstdlib.integer_of_int z) =
                       (Ortac_runtime.Gospelstdlib.List.length
-                         (Lazy.force t_new__028_).contents)
+                         (Lazy.force t_new__034_).contents)
                   with
                   | e ->
                       raise
@@ -559,5 +592,5 @@ let ortac_postcond cmd__010_ state__011_ res__012_ =
 let _ =
   QCheck_base_runner.run_tests_main
     (let count = 1000 in
-     [STMTests.agree_test ~count ~name:"Tuples STM tests" check_init_state
-        ortac_postcond])
+     [STMTests.agree_test ~count ~name:"Tuples STM tests" 1 check_init_state
+        ortac_show_cmd ortac_postcond])

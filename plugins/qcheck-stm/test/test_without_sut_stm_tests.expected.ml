@@ -4,46 +4,43 @@
 open Test_without_sut
 module Ortac_runtime = Ortac_runtime_qcheck_stm
 module SUT =
-  (Ortac_runtime.SUT.Make)(struct
-                             type sut = int t
-                             let init = Some (fun () -> make 16 0)
-                           end)
+  (Ortac_runtime.SUT.Make)(struct type sut = int t
+                                  let init () = make 16 0 end)
 module ModelElt =
   struct
     type nonrec elt = {
       contents: int list }
     let init =
-      Some
-        (let i = 16
-         and a_2 = 0 in
-         {
-           contents =
-             (try
-                Ortac_runtime.Gospelstdlib.List.init
-                  (Ortac_runtime.Gospelstdlib.integer_of_int i)
-                  (fun j -> a_2)
-              with
-              | e ->
-                  raise
-                    (Ortac_runtime.Partial_function
-                       (e,
-                         {
-                           Ortac_runtime.start =
-                             {
-                               pos_fname = "test_without_sut.mli";
-                               pos_lnum = 6;
-                               pos_bol = 265;
-                               pos_cnum = 290
-                             };
-                           Ortac_runtime.stop =
-                             {
-                               pos_fname = "test_without_sut.mli";
-                               pos_lnum = 6;
-                               pos_bol = 265;
-                               pos_cnum = 314
-                             }
-                         })))
-         })
+      let i = 16
+      and a_2 = 0 in
+      {
+        contents =
+          (try
+             Ortac_runtime.Gospelstdlib.List.init
+               (Ortac_runtime.Gospelstdlib.integer_of_int i) (fun j -> a_2)
+           with
+           | e ->
+               raise
+                 (Ortac_runtime.Partial_function
+                    (e,
+                      {
+                        Ortac_runtime.start =
+                          {
+                            pos_fname = "test_without_sut.mli";
+                            pos_lnum = 6;
+                            pos_bol = 265;
+                            pos_cnum = 290
+                          };
+                        Ortac_runtime.stop =
+                          {
+                            pos_fname = "test_without_sut.mli";
+                            pos_lnum = 6;
+                            pos_bol = 265;
+                            pos_cnum = 314
+                          }
+                      })))
+      }
+    let max_suts = 0
   end
 module Model = (Ortac_runtime.Model.Make)(ModelElt)
 module Spec =
@@ -59,9 +56,9 @@ module Spec =
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
     type sut = SUT.t
-    let init_sut = SUT.create
+    let init_sut = SUT.create 0
     type state = Model.t
-    let init_state = Model.create ()
+    let init_state = Model.create 0 ()
     type cmd =
       | Add of int * int 
     let show_cmd cmd__001_ =
@@ -87,6 +84,12 @@ module Spec =
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
+let ortac_show_cmd cmd__014_ state__015_ =
+  let open Spec in
+    match cmd__014_ with
+    | Add (a_1, b) ->
+        Format.asprintf "%s %a %a" "add" (Util.Pp.pp_int true) a_1
+          (Util.Pp.pp_int true) b
 let ortac_postcond cmd__004_ state__005_ res__006_ =
   let open Spec in
     let open STM in
@@ -173,5 +176,5 @@ let ortac_postcond cmd__004_ state__005_ res__006_ =
 let _ =
   QCheck_base_runner.run_tests_main
     (let count = 1000 in
-     [STMTests.agree_test ~count ~name:"Test_without_sut STM tests"
-        check_init_state ortac_postcond])
+     [STMTests.agree_test ~count ~name:"Test_without_sut STM tests" 0
+        check_init_state ortac_show_cmd ortac_postcond])

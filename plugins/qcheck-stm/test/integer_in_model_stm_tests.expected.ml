@@ -4,42 +4,40 @@
 open Integer_in_model
 module Ortac_runtime = Ortac_runtime_qcheck_stm
 module SUT =
-  (Ortac_runtime.SUT.Make)(struct
-                             type sut = t
-                             let init = Some (fun () -> create ())
-                           end)
+  (Ortac_runtime.SUT.Make)(struct type sut = t
+                                  let init () = create () end)
 module ModelElt =
   struct
     type nonrec elt = {
       i: Ortac_runtime.integer }
     let init =
-      Some
-        (let () = () in
-         {
-           i =
-             (try Ortac_runtime.Gospelstdlib.integer_of_int 0
-              with
-              | e ->
-                  raise
-                    (Ortac_runtime.Partial_function
-                       (e,
-                         {
-                           Ortac_runtime.start =
-                             {
-                               pos_fname = "integer_in_model.mli";
-                               pos_lnum = 6;
-                               pos_bol = 243;
-                               pos_cnum = 261
-                             };
-                           Ortac_runtime.stop =
-                             {
-                               pos_fname = "integer_in_model.mli";
-                               pos_lnum = 6;
-                               pos_bol = 243;
-                               pos_cnum = 262
-                             }
-                         })))
-         })
+      let () = () in
+      {
+        i =
+          (try Ortac_runtime.Gospelstdlib.integer_of_int 0
+           with
+           | e ->
+               raise
+                 (Ortac_runtime.Partial_function
+                    (e,
+                      {
+                        Ortac_runtime.start =
+                          {
+                            pos_fname = "integer_in_model.mli";
+                            pos_lnum = 6;
+                            pos_bol = 243;
+                            pos_cnum = 261
+                          };
+                        Ortac_runtime.stop =
+                          {
+                            pos_fname = "integer_in_model.mli";
+                            pos_lnum = 6;
+                            pos_bol = 243;
+                            pos_cnum = 262
+                          }
+                      })))
+      }
+    let max_suts = 1
   end
 module Model = (Ortac_runtime.Model.Make)(ModelElt)
 module Spec =
@@ -49,13 +47,13 @@ module Spec =
       | Integer: Ortac_runtime.integer ty 
     let integer = (Integer, Ortac_runtime.string_of_integer)
     type sut = SUT.t
-    let init_sut = SUT.create
+    let init_sut = SUT.create 1
     type state = Model.t
-    let init_state = Model.create ()
+    let init_state = Model.create 1 ()
     type cmd =
       | Use 
     let show_cmd cmd__001_ =
-      match cmd__001_ with | Use -> Format.asprintf "%s sut" "use"
+      match cmd__001_ with | Use -> Format.asprintf "%s <sut>" "use"
     let cleanup _ = ()
     let arb_cmd _ =
       let open QCheck in
@@ -63,55 +61,63 @@ module Spec =
     let next_state cmd__002_ state__003_ =
       match cmd__002_ with
       | Use ->
-          let tmp__004_ = Model.get state__003_ 0 in
-          Model.push (Model.drop_n state__003_ 1)
-            {
-              i =
-                (try Ortac_runtime.Gospelstdlib.succ tmp__004_.i
-                 with
-                 | e ->
-                     raise
-                       (Ortac_runtime.Partial_function
-                          (e,
-                            {
-                              Ortac_runtime.start =
-                                {
-                                  pos_fname = "integer_in_model.mli";
-                                  pos_lnum = 11;
-                                  pos_bol = 401;
-                                  pos_cnum = 419
-                                };
-                              Ortac_runtime.stop =
-                                {
-                                  pos_fname = "integer_in_model.mli";
-                                  pos_lnum = 11;
-                                  pos_bol = 401;
-                                  pos_cnum = 423
-                                }
-                            })))
-            }
-    let precond cmd__010_ state__011_ = match cmd__010_ with | Use -> true
+          let t_1__004_ = Model.get state__003_ 0 in
+          let t_1__005_ =
+            let open ModelElt in
+              {
+                i =
+                  (try Ortac_runtime.Gospelstdlib.succ t_1__004_.i
+                   with
+                   | e ->
+                       raise
+                         (Ortac_runtime.Partial_function
+                            (e,
+                              {
+                                Ortac_runtime.start =
+                                  {
+                                    pos_fname = "integer_in_model.mli";
+                                    pos_lnum = 11;
+                                    pos_bol = 401;
+                                    pos_cnum = 419
+                                  };
+                                Ortac_runtime.stop =
+                                  {
+                                    pos_fname = "integer_in_model.mli";
+                                    pos_lnum = 11;
+                                    pos_bol = 401;
+                                    pos_cnum = 423
+                                  }
+                              })))
+              } in
+          Model.push (Model.drop_n state__003_ 1) t_1__005_
+    let precond cmd__011_ state__012_ =
+      match cmd__011_ with
+      | Use -> let t_1__013_ = Model.get state__012_ 0 in true
     let postcond _ _ _ = true
-    let run cmd__012_ sut__013_ =
-      match cmd__012_ with
+    let run cmd__014_ sut__015_ =
+      match cmd__014_ with
       | Use ->
           Res
             (unit,
-              (let tmp__014_ = SUT.pop sut__013_ in
-               let res__015_ = use tmp__014_ in
-               (SUT.push tmp__014_ sut__013_; res__015_)))
+              (let t_1__016_ = SUT.pop sut__015_ in
+               let res__017_ = use t_1__016_ in
+               (SUT.push sut__015_ t_1__016_; res__017_)))
   end
 module STMTests = (Ortac_runtime.Make)(Spec)
 let check_init_state () = ()
-let ortac_postcond cmd__005_ state__006_ res__007_ =
+let ortac_show_cmd cmd__019_ state__020_ =
+  let open Spec in
+    match cmd__019_ with
+    | Use -> Format.asprintf "%s %s" "use" (SUT.get_name state__020_ 0)
+let ortac_postcond cmd__006_ state__007_ res__008_ =
   let open Spec in
     let open STM in
-      let new_state__008_ = lazy (next_state cmd__005_ state__006_) in
-      match (cmd__005_, res__007_) with
+      let new_state__009_ = lazy (next_state cmd__006_ state__007_) in
+      match (cmd__006_, res__008_) with
       | (Use, Res ((Unit, _), _)) -> None
       | _ -> None
 let _ =
   QCheck_base_runner.run_tests_main
     (let count = 1000 in
-     [STMTests.agree_test ~count ~name:"Integer_in_model STM tests"
-        check_init_state ortac_postcond])
+     [STMTests.agree_test ~count ~name:"Integer_in_model STM tests" 1
+        check_init_state ortac_show_cmd ortac_postcond])
