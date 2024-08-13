@@ -22,6 +22,17 @@ val pop : 'a t -> 'a
     ensures v = Sequence.hd (old t.contents)
     ensures old t.contents <> Sequence.empty *)
 
+val peek : 'a t -> 'a
+(*@ v = peek t
+    raises Empty -> t.contents = old t.contents = Sequence.empty
+    ensures v = Sequence.hd t.contents *)
+
+val peek_opt : 'a t -> 'a option
+(*@ v = peek_opt t
+    ensures match v with
+        | None -> t.contents = Sequence.empty
+        | Some a -> a = Sequence.hd t.contents *)
+
 val clear : 'a t -> unit
 (*@ clear t
     modifies t.contents
