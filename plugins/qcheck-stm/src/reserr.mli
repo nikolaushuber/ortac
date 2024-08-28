@@ -23,6 +23,7 @@ type W.kind +=
   | Incompatible_type of (string * string)
   | Incomplete_configuration_module of [ `Init_sut | `Sut ]
   | Incomplete_ret_val_computation of string
+  | Missing_fields_in_ret_sut of (string * string list)
   | Multiple_sut_arguments of string
   | No_configuration_file of string
   | No_init_function of string

@@ -23,6 +23,7 @@ type W.kind +=
   | Incompatible_type of (string * string)
   | Incomplete_ret_val_computation of string
   | Incomplete_configuration_module of [ `Init_sut | `Sut ]
+  | Missing_fields_in_ret_sut of (string * string list)
   | Multiple_sut_arguments of string
   | No_configuration_file of string
   | No_init_function of string
@@ -47,9 +48,10 @@ let level kind =
   | Constant_value _ | Ensures_not_found_for_next_state _
   | Functional_argument _ | Ghost_values _ | Ignored_modifies
   | Impossible_term_substitution _ | Incompatible_type _
-  | Incomplete_ret_val_computation _ | Multiple_sut_arguments _ | No_spec _
-  | Returned_tuple _ | Returning_sut _ | Sut_as_type_inst _ | Sut_in_tuple _
-  | Tuple_arity _ | Type_not_supported _ ->
+  | Incomplete_ret_val_computation _ | Missing_fields_in_ret_sut _
+  | Multiple_sut_arguments _ | No_spec _ | Returned_tuple _ | Returning_sut _
+  | Sut_as_type_inst _ | Sut_in_tuple _ | Tuple_arity _ | Type_not_supported _
+    ->
       W.Warning
   | Empty_cmd_type | Impossible_init_state_generation _ | Incompatible_sut _
   | Incomplete_configuration_module _ | No_configuration_file _
@@ -161,6 +163,12 @@ let pp_kind ppf kind =
              next_state function"
       in
       pf ppf "Skipping clause:@ %a" text msg
+  | Missing_fields_in_ret_sut (fct, models) ->
+      pf ppf "Skipping %s:@ %a:@ %a" fct text
+        "the specification of the function does not specify the following \
+         fields of the model"
+        (Fmt.list ~sep:(Fmt.any ",@ ") Fmt.string)
+        models
   | Tuple_arity fct ->
       pf ppf "Skipping %s:@ %a" fct text "Can only test tuples with arity < 10"
   (* This following message is broad and used in seemingly different contexts
