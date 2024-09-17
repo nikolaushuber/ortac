@@ -207,5 +207,6 @@ module Make (Spec : Spec) = struct
       postcond =
     Test.make ~name ~count
       (Internal.arb_cmds Spec.init_state)
-      (agree_prop max_suts wrapped_init_state ortac_show_cmd postcond)
+      (Util.fork_prop_with_timeout 10
+         (agree_prop max_suts wrapped_init_state ortac_show_cmd postcond))
 end
